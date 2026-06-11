@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">
+  <rect width="180" height="180" rx="40" fill="#faf6ec"/>
+  <rect x="10" y="10" width="160" height="160" rx="32" fill="none" stroke="#b0433a" stroke-width="3"/>
+  <text x="90" y="118" font-size="96" font-weight="800" text-anchor="middle"
+        font-family="'Hiragino Mincho ProN','Yu Mincho',serif" fill="#2b2b2b">暦</text>
+  <circle cx="138" cy="44" r="16" fill="#b0433a"/>
+</svg>

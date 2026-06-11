@@ -1,0 +1,12 @@
+{
+  "name": "和暦カレンダー",
+  "short_name": "和暦",
+  "lang": "ja",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#faf6ec",
+  "theme_color": "#faf6ec",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

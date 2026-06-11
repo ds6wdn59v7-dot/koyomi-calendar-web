@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#faf6ec">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>和暦カレンダー</title>
+<style>
+:root, [data-palette="paper"] {
+  --paper:#faf6ec; --paper2:#f3ecdb; --ink:#2b2b2b; --ink-soft:#574e3e;
+  --sub:#948872; --faint:#b8ad94; --red:#b0433a; --red-soft:#c47368;
+  --gold:#9a8c6a; --sat:#5b6b7a; --line:rgba(43,43,43,.14); --line2:rgba(43,43,43,.07);
+  --sel:#b0433a; --chip-bg:rgba(176,67,58,.10); --grid-bg:rgba(255,255,255,.35);
+}
+[data-palette="sumi"] {
+  --paper:#20242b; --paper2:#262b33; --ink:#ece6d6; --ink-soft:#c7c0ad;
+  --sub:#93897a; --faint:#6c6557; --red:#df8975; --red-soft:#c97b69;
+  --gold:#c8ae74; --sat:#93abbd; --line:rgba(236,230,214,.13); --line2:rgba(236,230,214,.06);
+  --sel:#df8975; --chip-bg:rgba(223,137,117,.14); --grid-bg:rgba(255,255,255,.03);
+}
+[data-palette="ai"] {
+  --paper:#f6f4ef; --paper2:#ece8df; --ink:#1f2630; --ink-soft:#3f4a57;
+  --sub:#7c8794; --faint:#aab2bb; --red:#2f5d70; --red-soft:#5f8597;
+  --gold:#b08a4a; --sat:#5a7382; --line:rgba(31,38,48,.13); --line2:rgba(31,38,48,.06);
+  --sel:#2f5d70; --chip-bg:rgba(47,93,112,.10); --grid-bg:rgba(255,255,255,.4);
+}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html, body { height:100%; }
+body {
+  background:var(--paper); color:var(--ink);
+  font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;
+  overscroll-behavior:none;
+}
+body[data-font="mincho"] { font-family:"Hiragino Mincho ProN","Yu Mincho",serif; }
+.serif { font-family:"Hiragino Mincho ProN","Yu Mincho",serif; }
+button { font:inherit; color:inherit; background:none; border:none; cursor:pointer; }
+
+/* ===== 画面 ===== */
+.screen { position:fixed; inset:0; display:flex; flex-direction:column; background:var(--paper);
+  padding-top:env(safe-area-inset-top); transition:transform .25s ease; }
+#detailScreen { transform:translateX(100%); z-index:10; }
+#detailScreen.open { transform:translateX(0); }
+
+/* ===== 月ヘッダー ===== */
+.mhead { position:relative; text-align:center; padding:14px 18px 10px; }
+.mhead .era { font-size:12px; letter-spacing:4px; font-weight:700; color:var(--red); }
+.mhead .ym { display:flex; align-items:baseline; justify-content:center; gap:10px; margin-top:4px; }
+.mhead .y { font-size:16px; font-weight:600; color:var(--sub); }
+.mhead .m { font-size:38px; font-weight:900; }
+.mhead .wafu { font-size:17px; letter-spacing:2px; font-weight:600; color:var(--gold); }
+.nav-btn { position:absolute; top:50%; transform:translateY(-50%); width:36px; height:36px;
+  border-radius:50%; background:var(--grid-bg); border:1px solid var(--line);
+  color:var(--sub); font-size:14px; display:flex; align-items:center; justify-content:center; }
+.nav-btn.prev { left:14px; } .nav-btn.next { right:60px; }
+.gear-btn { position:absolute; right:14px; top:50%; transform:translateY(-50%); width:36px; height:36px;
+  border-radius:50%; background:var(--grid-bg); border:1px solid var(--line); color:var(--sub); font-size:16px; }
+
+/* ===== 週・グリッド ===== */
+.wrow { display:grid; grid-template-columns:repeat(7,1fr); border-bottom:1px solid var(--line); }
+.wrow span { text-align:center; padding:6px 0; font-size:12px; font-weight:700; color:var(--ink-soft); }
+.wrow span:first-child { color:var(--red); } .wrow span:last-child { color:var(--sat); }
+.grid-wrap { flex:1; overflow-y:auto; padding:4px 8px calc(12px + env(safe-area-inset-bottom)); }
+.grid { display:grid; grid-template-columns:repeat(7,1fr); }
+.cell { position:relative; display:flex; flex-direction:column; align-items:center;
+  min-height:72px; padding:6px 0 4px; border-bottom:1px solid var(--line2); }
+.cell .roku { height:11px; font-size:8.5px; font-weight:700; color:var(--sub); }
+.cell .roku.taian { color:var(--red); } .cell .roku.butsu { color:var(--faint); }
+.cell .num { font-size:18px; font-weight:700; line-height:1.2; }
+.cell.sun .num { color:var(--red); } .cell.sat .num { color:var(--sat); }
+.cell .old { font-size:9px; color:var(--sub); height:12px; }
+.cell .moon { height:13px; margin-top:1px; }
+.cell .marks { height:11px; display:flex; gap:2px; align-items:center; margin-top:1px; font-size:9px; }
+.cell .marks i { width:5px; height:5px; border-radius:50%; display:block; }
+.cell .badge { height:14px; margin-top:1px; display:flex; align-items:center; }
+.cell .badge .sekki { font-size:8px; font-weight:800; padding:1px 5px; border-radius:4px;
+  background:var(--gold); color:var(--paper); letter-spacing:.5px; white-space:nowrap; }
+.cell .badge .evdot { width:4px; height:4px; border-radius:50%; background:var(--red); }
+.cell.today { background:var(--chip-bg); border-radius:12px; box-shadow:inset 0 0 0 1.6px var(--red); }
+.cell.today::before { content:"本日"; position:absolute; top:-7px; left:50%; transform:translateX(-50%);
+  font-size:8px; font-weight:800; letter-spacing:1px; background:var(--red); color:#fff;
+  padding:1px 6px; border-radius:7px; }
+
+/* ===== 詳細 ===== */
+.dhead { display:flex; align-items:center; padding:8px 12px; border-bottom:1px solid var(--line2); }
+.dhead .back { font-size:15px; color:var(--red); padding:6px 10px 6px 0; }
+.dhead .dtitle { flex:1; text-align:center; font-size:15px; font-weight:700; }
+.dhead .addev { font-size:22px; color:var(--red); padding:0 4px; line-height:1; }
+.dbody { flex:1; overflow-y:auto; padding:0 20px calc(24px + env(safe-area-inset-bottom)); }
+.hero { text-align:center; padding:10px 0 8px; border-bottom:1px solid var(--line); }
+.hero .era { font-size:13px; letter-spacing:2px; color:var(--sub); font-weight:600; }
+.hero .big { font-size:44px; font-weight:900; letter-spacing:-.5px; line-height:1.1; }
+.hero .big.sun { color:var(--red); } .hero .big.sat { color:var(--sat); }
+.hero .sub { display:flex; align-items:center; justify-content:center; gap:9px; margin-top:3px; flex-wrap:wrap; }
+.hero .wd { font-size:14px; letter-spacing:2px; font-weight:600; color:var(--ink-soft); }
+.hero .wd.sun { color:var(--red); } .hero .wd.sat { color:var(--sat); }
+.hero .tide-chip { font-size:11px; font-weight:800; letter-spacing:1px; padding:4px 11px;
+  border-radius:20px; background:var(--chip-bg); color:var(--ink-soft); }
+.hero .ev { font-size:12px; letter-spacing:1.5px; font-weight:600; color:var(--gold); }
+
+.card { background:var(--paper2); border:1px solid var(--line2); border-radius:14px;
+  padding:8px 12px; margin-top:9px; }
+.card .chead { display:flex; align-items:center; justify-content:space-between; }
+.card .ctitle { font-size:14px; font-weight:700; letter-spacing:2px; }
+.legend { display:flex; gap:8px; font-size:10px; color:var(--sub); }
+.legend i { width:7px; height:7px; border-radius:50%; display:inline-block; margin-right:3px; }
+.noev { font-size:12px; color:var(--faint); padding:6px 0; }
+.evrow { display:flex; gap:10px; align-items:flex-start; margin-top:6px; }
+.evrow .bar { width:3px; align-self:stretch; border-radius:3px; }
+.evrow .time { width:48px; font-size:13px; font-weight:800; }
+.evrow .time small { display:block; font-size:10px; font-weight:600; color:var(--sub); }
+.evrow .et { font-size:13.5px; font-weight:700; }
+.evrow .et small { display:block; font-size:10px; color:var(--sub); font-weight:400; }
+
+.irow { display:flex; gap:14px; padding:8px 0; border-bottom:1px solid var(--line2); }
+.irow .lbl { width:50px; flex:none; font-size:11px; font-weight:700; letter-spacing:2px; color:var(--sub); padding-top:2px; }
+.irow .main { font-size:15px; font-weight:600; }
+.irow .main small { font-size:11px; color:var(--sub); font-weight:400; margin-left:7px; }
+.irow .note { font-size:11.5px; color:var(--sub); margin-top:3px; }
+.irow .moonbig { margin-left:auto; }
+.sekki-badge { font-size:11px; font-weight:800; padding:2px 8px; border-radius:5px;
+  background:var(--gold); color:var(--paper); margin-right:8px; }
+
+.kgrid { display:flex; gap:6px; margin-top:7px; }
+.kcell { flex:1; text-align:center; background:var(--grid-bg); border:1px solid var(--line2);
+  border-radius:11px; padding:8px 2px 9px; }
+.kcell .l { font-size:9px; font-weight:700; letter-spacing:1.5px; color:var(--sub); }
+.kcell .v { font-size:19px; font-weight:900; margin:2px 0; white-space:nowrap; }
+.kcell .v.taian { color:var(--red); }
+.kcell .s { font-size:8px; color:var(--sub); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+.senrow { display:flex; align-items:center; gap:6px; margin-top:7px; }
+.senrow .lbl { font-size:10px; font-weight:700; letter-spacing:2px; color:var(--sub); flex:none; }
+.chips { display:flex; gap:6px; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+.chip { flex:none; display:flex; align-items:center; gap:4px; font-size:11.5px; font-weight:700;
+  padding:4px 11px; border-radius:20px; border:1px solid var(--line); color:var(--sub); }
+.chip i { width:5px; height:5px; border-radius:50%; background:var(--sat); display:block; }
+.chip.ok { border-color:transparent; background:var(--chip-bg); color:var(--ink); }
+.chip.ok i { background:var(--gold); }
+.chip.ok.big { background:var(--red); color:#fff; }
+.chip.ok.big i { background:rgba(255,255,255,.9); }
+.chip.ng.big { border-color:var(--ink); }
+
+.tide-head { display:flex; align-items:center; justify-content:space-between; }
+.tide-head .t { font-size:14px; font-weight:700; letter-spacing:2px; }
+.tide-head .t small { font-size:10.5px; color:var(--sub); font-weight:600; margin-left:6px; letter-spacing:0; }
+.tide-pill { font-size:11px; font-weight:800; letter-spacing:1.5px; padding:3px 10px;
+  border-radius:20px; background:var(--gold); color:#fff; }
+.tide-pill.oo { background:var(--red); }
+.tide-cells { display:flex; gap:7px; margin-top:7px; }
+.tcell { flex:1; text-align:center; background:var(--grid-bg); border:1px solid var(--line2);
+  border-radius:11px; padding:5px 0; }
+.tcell .tt { font-size:10px; font-weight:800; letter-spacing:1.5px; }
+.tcell .tt.hi { color:var(--red); } .tcell .tt.lo { color:var(--sat); }
+.tcell .tv { font-size:17px; font-weight:800; }
+.tcell .tl { font-size:10px; font-weight:600; color:var(--sub); }
+.dfoot { display:flex; justify-content:space-between; font-size:10.5px; color:var(--sub);
+  padding-top:6px; margin-top:8px; border-top:1px solid var(--line2); }
+.disclaimer { font-size:10px; color:var(--faint); margin-top:10px; line-height:1.5; }
+
+/* ===== モーダル・シート ===== */
+.overlay { position:fixed; inset:0; background:rgba(0,0,0,.46); z-index:50;
+  display:none; align-items:flex-end; justify-content:center; }
+.overlay.center { align-items:center; padding:24px; }
+.overlay.open { display:flex; }
+.sheet { background:var(--paper); width:100%; max-height:86vh; overflow-y:auto;
+  border-radius:18px 18px 0 0; padding:16px 18px calc(20px + env(safe-area-inset-bottom)); }
+.modal { background:var(--paper); border-radius:16px; padding:18px; max-width:340px; width:100%; }
+.modal .cat { font-size:11px; font-weight:700; letter-spacing:2px; color:var(--gold); }
+.modal .term { font-size:24px; font-weight:900; margin:4px 0 0; }
+.modal .yomi { font-size:12px; color:var(--sub); margin-bottom:8px; }
+.modal .desc { font-size:13px; line-height:1.8; }
+.modal .catdesc { font-size:11.5px; line-height:1.7; color:var(--sub); margin-top:10px;
+  padding-top:10px; border-top:1px solid var(--line2); }
+.modal .close { display:block; margin:14px auto 0; font-size:13px; font-weight:700; color:var(--red); }
+
+.sheet h3 { font-size:15px; font-weight:800; text-align:center; margin-bottom:12px; }
+.frow { display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:10px 0; border-bottom:1px solid var(--line2); }
+.frow label { font-size:13px; font-weight:600; flex:none; }
+.frow input[type="text"], .frow input[type="time"], .frow select {
+  font:inherit; font-size:14px; padding:7px 10px; border:1px solid var(--line); border-radius:9px;
+  background:var(--grid-bg); color:var(--ink); flex:1; min-width:0; -webkit-appearance:none; }
+.frow input[type="checkbox"] { width:20px; height:20px; accent-color:var(--red); }
+.emoji-row { display:flex; gap:8px; overflow-x:auto; padding:10px 0; -webkit-overflow-scrolling:touch; }
+.emoji-row button { font-size:24px; padding:5px 7px; border-radius:50%; flex:none; }
+.emoji-row button.sel { background:var(--chip-bg); box-shadow:inset 0 0 0 1.5px var(--red); }
+.sheet-actions { display:flex; gap:10px; margin-top:16px; }
+.sheet-actions button { flex:1; padding:12px; border-radius:12px; font-size:14px; font-weight:700; }
+.btn-cancel { background:var(--grid-bg); border:1px solid var(--line); color:var(--sub); }
+.btn-save { background:var(--red); color:#fff; }
+.btn-save:disabled { opacity:.4; }
+.btn-delete { width:100%; margin-top:10px; padding:11px; border-radius:12px; font-size:13px;
+  font-weight:700; color:var(--red); border:1px solid var(--red); }
+</style>
+</head>
+<body data-palette="paper" data-density="standard" data-font="gothic">
+
+<!-- 月間ビュー -->
+<div class="screen" id="monthScreen">
+  <div class="mhead">
+    <button class="nav-btn prev" id="prevBtn">&#10094;</button>
+    <div class="era serif" id="eraLine"></div>
+    <div class="ym">
+      <span class="y" id="yLabel"></span>
+      <span class="m" id="mLabel"></span>
+      <span class="wafu serif" id="wafuLabel"></span>
+    </div>
+    <button class="nav-btn next" id="nextBtn">&#10095;</button>
+    <button class="gear-btn" id="gearBtn">&#9881;</button>
+  </div>
+  <div class="wrow" id="weekRow"></div>
+  <div class="grid-wrap"><div class="grid" id="grid"></div></div>
+</div>
+
+<!-- 日詳細 -->
+<div class="screen" id="detailScreen">
+  <div class="dhead">
+    <button class="back" id="backBtn">&#10094; 戻る</button>
+    <div class="dtitle" id="dTitle"></div>
+    <button class="addev" id="addEvBtn">+</button>
+  </div>
+  <div class="dbody" id="dBody"></div>
+</div>
+
+<!-- 予定シート -->
+<div class="overlay" id="evOverlay">
+  <div class="sheet" id="evSheet"></div>
+</div>
+
+<!-- 設定シート -->
+<div class="overlay" id="setOverlay">
+  <div class="sheet">
+    <h3>設定</h3>
+    <div class="frow"><label>配色</label>
+      <select id="setPalette">
+        <option value="paper">生成り</option><option value="sumi">墨</option><option value="ai">藍</option>
+      </select></div>
+    <div class="frow"><label>密度</label>
+      <select id="setDensity">
+        <option value="simple">すっきり</option><option value="standard" selected>標準</option><option value="detail">詳しく</option>
+      </select></div>
+    <div class="frow"><label>書体</label>
+      <select id="setFont">
+        <option value="gothic">ゴシック</option><option value="mincho">明朝</option>
+      </select></div>
+    <div class="frow"><label>地域（潮汐・日の出入り）</label>
+      <select id="setRegion"></select></div>
+    <div class="sheet-actions">
+      <button class="btn-save" id="setClose">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- 解説モーダル -->
+<div class="overlay center" id="infoOverlay">
+  <div class="modal" id="infoModal"></div>
+</div>
+
+<script src="koyomi.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
