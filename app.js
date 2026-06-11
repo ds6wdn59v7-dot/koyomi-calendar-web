@@ -123,6 +123,20 @@ function closeDetail() {
   state.sel = null;
 }
 
+function moveDay(delta) {
+  if (!state.sel) return;
+  const d = new Date(state.sel.y, state.sel.m - 1, state.sel.d + delta);
+  state.sel = { y: d.getFullYear(), m: d.getMonth() + 1, d: d.getDate() };
+  // 月をまたいだら背後の月間ビューも追従させる
+  if (state.sel.y !== state.dispY || state.sel.m !== state.dispM) {
+    state.dispY = state.sel.y;
+    state.dispM = state.sel.m;
+    renderMonth();
+  }
+  renderDetail();
+  $("dBody").scrollTop = 0;
+}
+
 function renderDetail() {
   const dt = state.sel;
   if (!dt) return;
@@ -428,6 +442,8 @@ function init() {
   $("prevBtn").addEventListener("click", () => moveMonth(-1));
   $("nextBtn").addEventListener("click", () => moveMonth(1));
   $("backBtn").addEventListener("click", closeDetail);
+  $("dPrev").addEventListener("click", () => moveDay(-1));
+  $("dNext").addEventListener("click", () => moveDay(1));
   $("addEvBtn").addEventListener("click", () => openEventSheet(null));
   [["evOverlay", closeEventSheet],
    ["setOverlay", () => $("setOverlay").classList.remove("open")],

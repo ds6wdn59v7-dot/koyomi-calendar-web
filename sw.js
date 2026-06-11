@@ -1,5 +1,5 @@
 /* sw.js — オフラインキャッシュ（静的アプリなので cache-first） */
-const CACHE = "koyomi-v3";
+const CACHE = "koyomi-v4";
 const ASSETS = ["./", "./index.html", "./app.js", "./koyomi.js", "./manifest.webmanifest", "./icon.svg"];
 
 self.addEventListener("install", (e) => {
