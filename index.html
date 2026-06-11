@@ -6,6 +6,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#faf6ec">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap" rel="stylesheet">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon.svg">
 <title>和暦カレンダー</title>
@@ -32,11 +35,11 @@
 html, body { height:100%; }
 body {
   background:var(--paper); color:var(--ink);
-  font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;
+  font-family:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;
   overscroll-behavior:none;
 }
-body[data-font="mincho"] { font-family:"Hiragino Mincho ProN","Yu Mincho",serif; }
-.serif { font-family:"Hiragino Mincho ProN","Yu Mincho",serif; }
+body[data-font="mincho"], body[data-font="mincho"] input, body[data-font="mincho"] select,
+.serif { font-family:"Shippori Mincho","Hiragino Mincho ProN","Yu Mincho",serif; }
 button { font:inherit; color:inherit; background:none; border:none; cursor:pointer; }
 
 /* ===== 画面 ===== */
