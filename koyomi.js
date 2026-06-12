@@ -260,6 +260,12 @@ const Koyomi = (() => {
     { id: "fukuoka", name: "福岡", bay: "博多湾", off: 95, amp: 1.18, base: 115, lat: 33.62, lng: 130.40 },
     { id: "naha", name: "那覇", bay: "東シナ海", off: 140, amp: 0.9, base: 100, lat: 26.22, lng: 127.68 },
     { id: "sendai", name: "仙台", bay: "仙台湾", off: -34, amp: 0.82, base: 75, lat: 38.27, lng: 141.03 },
+    { id: "kushiro", name: "釧路", bay: "太平洋", off: -62, amp: 0.72, base: 78, lat: 42.99, lng: 144.37 },
+    { id: "niigata", name: "新潟", bay: "日本海", off: 65, amp: 0.22, base: 28, lat: 37.95, lng: 139.06 },
+    { id: "shizuoka", name: "静岡", bay: "駿河湾", off: 8, amp: 0.95, base: 100, lat: 34.97, lng: 138.39 },
+    { id: "kochi", name: "高知", bay: "土佐湾", off: 18, amp: 1.0, base: 98, lat: 33.50, lng: 133.57 },
+    { id: "nagasaki", name: "長崎", bay: "長崎港", off: 108, amp: 1.62, base: 175, lat: 32.74, lng: 129.87 },
+    { id: "kagoshima", name: "鹿児島", bay: "鹿児島湾", off: 118, amp: 1.28, base: 130, lat: 31.59, lng: 130.56 },
   ];
 
   const CAT = {

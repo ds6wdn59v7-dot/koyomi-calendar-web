@@ -18,6 +18,8 @@ const CAL_SOURCES = {
   family: { name: "家族", color: "#1f8a5b" },
 };
 const PRESET_EMOJIS = ["🍽️", "🤝", "🎂", "🍻", "🏥", "💼", "🧘", "✈️", "⚽️", "🎌", "📚", "🎵", "🐟", "⛩️"];
+// 月ごとの季節アイコン（月間ビュー左上にゆらゆら表示）
+const MONTH_ICONS = ["", "🎍", "👹", "🎎", "🌸", "🎏", "☔️", "🎋", "🌻", "🌕", "🍁", "🍂", "⛄️"];
 
 const state = {
   today: Koyomi.today(),
@@ -62,6 +64,7 @@ function renderMonth() {
   $("eraLine").textContent = `${Koyomi.eraKanjiString(y)} ・ ${Koyomi.yearEtoKanji(y)}`;
   $("yLabel").textContent = y;
   $("mLabel").textContent = m;
+  $("monthIcon").textContent = MONTH_ICONS[m];
 
   const days = Koyomi.month(y, m);
   $("wafuLabel").textContent = Koyomi.WAFU[days[0].lunar.m];
@@ -249,6 +252,10 @@ function renderDetail() {
         ${d.event ? `<span class="ev serif">◆ ${d.event}</span>` : ""}
       </div>
     </div>
+    <div class="dnav">
+      <button id="dPrev">&#10094; 前日</button>
+      <button id="dNext">翌日 &#10095;</button>
+    </div>
     ${schedule}
     ${lunarRow}${sekkiRow}${moonRow}
     <div class="kgrid">${kcells}</div>
@@ -276,6 +283,8 @@ function renderDetail() {
   $("dBody").querySelectorAll("[data-eid]").forEach((el) => {
     el.addEventListener("click", () => openEventSheet(el.dataset.eid));
   });
+  $("dPrev").addEventListener("click", () => moveDay(-1));
+  $("dNext").addEventListener("click", () => moveDay(1));
 }
 
 // ===== 解説モーダル =====
@@ -442,8 +451,6 @@ function init() {
   $("prevBtn").addEventListener("click", () => moveMonth(-1));
   $("nextBtn").addEventListener("click", () => moveMonth(1));
   $("backBtn").addEventListener("click", closeDetail);
-  $("dPrev").addEventListener("click", () => moveDay(-1));
-  $("dNext").addEventListener("click", () => moveDay(1));
   $("addEvBtn").addEventListener("click", () => openEventSheet(null));
   [["evOverlay", closeEventSheet],
    ["setOverlay", () => $("setOverlay").classList.remove("open")],
