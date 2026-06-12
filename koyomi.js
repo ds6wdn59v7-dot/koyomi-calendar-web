@@ -548,25 +548,45 @@ const Koyomi = (() => {
     return { r, range, period: TIDE_PERIOD, hi1, hi: r.base + range / 2, lo: r.base - range / 2, base: r.base };
   }
 
+  // 満潮・干潮の極値を、日の前後まで含めて生成（カーブと干満点で共通利用）
+  function tideExtrema(p) {
+    const j = (b, a, s) => Math.round(b + Math.sin(s) * a);
+    const ex = [];
+    for (let k = -1; k <= 3; k++) {
+      const th = p.hi1 + k * p.period;
+      ex.push({ type: "満潮", min: th, level: j(p.hi, 9, th) });
+      const tl = p.hi1 - p.period / 2 + k * p.period;
+      ex.push({ type: "干潮", min: tl, level: j(p.lo, 7, tl + 9) });
+    }
+    ex.sort((a, b) => a.min - b.min);
+    return ex;
+  }
+
   function tides(dt, regionId) {
     const p = tideParams(dt, regionId);
-    const j = (b, a, s) => Math.round(b + Math.sin(s) * a);
-    const list = [];
-    for (let m = p.hi1; m < 1440; m += p.period) list.push({ type: "満潮", min: m, level: j(p.hi, 9, m) });
-    let lo0 = p.hi1 - p.period / 2; if (lo0 < 0) lo0 += p.period;
-    for (let l = lo0; l < 1440; l += p.period) list.push({ type: "干潮", min: l, level: j(p.lo, 7, l + 9) });
-    list.sort((a, b) => a.min - b.min);
+    const list = tideExtrema(p).filter((e) => e.min >= 0 && e.min < 1440);
     return { name: tideName(dt), range: Math.round(p.range), region: p.r, events: list, base: p.base, hi: p.hi, lo: p.lo };
   }
 
   function tideCurve(dt, regionId, samples) {
     const p = tideParams(dt, regionId);
+    const ex = tideExtrema(p);
     const pts = [];
+    let mn = Infinity, mx = -Infinity;
+    let seg = 0;
     for (let i = 0; i <= samples; i++) {
       const t = (i / samples) * 1440;
-      pts.push({ min: t, level: p.base + (p.range / 2) * Math.cos((t - p.hi1) / p.period * 2 * Math.PI) });
+      // t を挟む極値 e0(≤t) と e1(>t) を探す
+      while (seg < ex.length - 2 && ex[seg + 1].min <= t) seg++;
+      const e0 = ex[seg], e1 = ex[seg + 1];
+      const frac = (t - e0.min) / (e1.min - e0.min);
+      // 半余弦補間：両端の極値（干満点）をなめらかに通る
+      const level = e0.level + (e1.level - e0.level) * (1 - Math.cos(Math.PI * frac)) / 2;
+      if (level < mn) mn = level;
+      if (level > mx) mx = level;
+      pts.push({ min: t, level });
     }
-    return { pts, max: p.base + p.range / 2, min: p.base - p.range / 2 };
+    return { pts, max: mx, min: mn };
   }
 
   function fmtTime(mins) {
