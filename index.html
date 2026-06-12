@@ -115,7 +115,12 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 .hero .era { font-size:13px; letter-spacing:2px; color:var(--sub); font-weight:600; }
 .hero .big { font-size:44px; font-weight:900; letter-spacing:-.5px; line-height:1.1; }
 .hero .big.sun { color:var(--red); } .hero .big.sat { color:var(--sat); }
-.hero .sub { display:flex; align-items:center; justify-content:center; gap:9px; margin-top:3px; flex-wrap:wrap; }
+/* 曜日を中央に固定し、潮を右端に固定。祝日・行事はその間に並ぶ */
+.hero .sub { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:6px; margin-top:3px; }
+.hero .sub-side { display:flex; align-items:center; gap:8px; min-width:0; }
+.hero .sub-side.right { justify-content:flex-end; flex-wrap:nowrap; }
+.hero .sub-side .ev { min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.hero .tide-chip { flex:none; }
 .hero .wd { font-size:14px; letter-spacing:2px; font-weight:600; color:var(--ink-soft); }
 .hero .wd.sun { color:var(--red); } .hero .wd.sat { color:var(--sat); }
 .hero .tide-chip { font-size:11px; font-weight:800; letter-spacing:1px; padding:4px 11px;
@@ -284,7 +289,7 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
   <div class="modal" id="infoModal"></div>
 </div>
 
-<script src="koyomi.js?v=6"></script>
-<script src="app.js?v=6"></script>
+<script src="koyomi.js?v=7"></script>
+<script src="app.js?v=7"></script>
 </body>
 </html>

@@ -50,13 +50,14 @@ function moonSVG(age, size, opts = {}) {
   const rightTerm = cos > 0 ? waxing : !waxing;     // 境界線が右に膨らむか
   const sweepTerm = rightTerm ? 0 : 1;
   const lit = `M ${cx},${cy - r} A ${r},${r} 0 0 ${sweepLimb} ${cx},${cy + r} A ${rx},${r} 0 0 ${sweepTerm} ${cx},${cy - r} Z`;
-  const ink = opts.ink || "var(--ink)";
+  // 反転表示: 影の部分を濃く、光っている部分を明るく描く
+  const litColor = opts.ink || "var(--paper)";
   const ring = opts.ring
     ? `<circle cx="${cx}" cy="${cy}" r="${r - 0.8}" fill="none" stroke="${opts.ring}" stroke-width="1.4"/>`
     : `<circle cx="${cx}" cy="${cy}" r="${r - 0.4}" fill="none" stroke="var(--line)" stroke-width="0.8"/>`;
   return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="display:block">
-    <circle cx="${cx}" cy="${cy}" r="${r - 0.4}" fill="var(--faint)" opacity="0.42"/>
-    <path d="${lit}" fill="${ink}"/>
+    <circle cx="${cx}" cy="${cy}" r="${r - 0.4}" fill="var(--ink)" opacity="0.85"/>
+    <path d="${lit}" fill="${litColor}"/>
     ${ring}
   </svg>`;
 }
@@ -175,7 +176,8 @@ function renderDetail() {
     evRows += `<div class="evrow" data-eid="${esc(e.id)}">
       <div class="bar" style="background:${c.color}"></div>
       <div class="time">${time}${endT}</div>
-      <div class="et">${e.emoji ? esc(e.emoji) + " " : ""}${esc(e.title)}<small>${c.name}</small></div>
+      <div class="et">${e.emoji ? esc(e.emoji) + " " : ""}${esc(e.title)}
+        <small>${e.place ? "📍 " + esc(e.place) + "　" : ""}${c.name}</small></div>
     </div>`;
   }
   const schedule = `<div class="card">
@@ -255,10 +257,13 @@ function renderDetail() {
       <div class="era serif">${Koyomi.eraKanjiString(dt.y)}　${dt.y} 年 ${dt.m} 月</div>
       <div class="big ${wdCls}">${dt.d}</div>
       <div class="sub">
+        <span class="sub-side"></span>
         <span class="wd serif ${wdCls}">${d.weekdayLabel}曜日</span>
-        ${d.holiday ? `<span class="ev serif" style="color:var(--red)">◆ ${d.holiday}</span>` : ""}
-        <span class="tide-chip" data-info="tide">潮 ${tides.name}</span>
-        ${d.event ? `<span class="ev serif">◆ ${d.event}</span>` : ""}
+        <span class="sub-side right">
+          ${d.holiday ? `<span class="ev serif" style="color:var(--red)">◆ ${d.holiday}</span>` : ""}
+          ${d.event ? `<span class="ev serif">◆ ${d.event}</span>` : ""}
+          <span class="tide-chip" data-info="tide">潮 ${tides.name}</span>
+        </span>
       </div>
     </div>
     <div class="dnav">
@@ -347,6 +352,7 @@ function openEventSheet(editId = null) {
     end: ev && ev.end != null ? Koyomi.fmtTime(ev.end) : "10:00",
     cal: ev ? ev.cal : "privat",
     emoji: ev ? ev.emoji || "" : "",
+    place: ev ? ev.place || "" : "",
   };
   const calOpts = Object.entries(CAL_SOURCES).map(([k, s]) =>
     `<option value="${k}" ${v.cal === k ? "selected" : ""}>${s.name}</option>`).join("");
@@ -359,6 +365,7 @@ function openEventSheet(editId = null) {
     <div class="frow"><label>終日</label><input type="checkbox" id="evAllDay" ${v.allDay ? "checked" : ""}></div>
     <div class="frow" id="timeRow1"><label>開始</label><input type="time" id="evStart" value="${v.start}"></div>
     <div class="frow" id="timeRow2"><label>終了</label><input type="time" id="evEnd" value="${v.end}"></div>
+    <div class="frow"><label>場所</label><input type="text" id="evPlace" value="${esc(v.place)}" placeholder="例: 渋谷"></div>
     <div class="frow"><label>カレンダー</label><select id="evCal">${calOpts}</select></div>
     <div class="frow" style="border:none"><label>アイコン</label><input type="text" id="evEmoji" value="${esc(v.emoji)}" placeholder="絵文字" style="max-width:80px;text-align:center"></div>
     <div class="emoji-row" id="emojiRow">${emojiBtns}</div>
@@ -410,6 +417,7 @@ function saveEvent() {
     id: state.editingId || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())),
     y: dt.y, m: dt.m, d: dt.d, min, end, title,
     cal: $("evCal").value, emoji,
+    place: $("evPlace").value.trim() || null,
   };
   if (state.editingId) {
     state.events = state.events.map((e) => (e.id === state.editingId ? ev : e));
