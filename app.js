@@ -485,6 +485,15 @@ const GCal = {
   },
   get connected() { return !!this.token; },
   get tokenValid() { const t = this.token; return t && t.expires_at > Date.now() + 60000; },
+  // 一度接続したかどうか（トークン失効後も「再接続が必要」を出すために保持）
+  get enabled() { return localStorage.getItem("gcalEnabled") === "1"; },
+  set enabled(v) {
+    if (v) localStorage.setItem("gcalEnabled", "1");
+    else localStorage.removeItem("gcalEnabled");
+  },
+
+  showReconnect() { const b = document.getElementById("gcalBanner"); if (b) b.hidden = false; },
+  hideReconnect() { const b = document.getElementById("gcalBanner"); if (b) b.hidden = true; },
 
   /// アクセストークンを取得（interactive=trueでポップアップ許可）
   ensureToken(interactive) {
@@ -507,13 +516,19 @@ const GCal = {
   },
 
   async api(path, opts = {}) {
+    // 失効していればサイレント再取得を試みる。失敗したら再接続バナーを表示
     const tok = await this.ensureToken(false);
-    if (!tok) return null;
+    if (!tok) { if (this.enabled) this.showReconnect(); return null; }
     const res = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary" + path, {
       ...opts,
       headers: { Authorization: "Bearer " + tok, "Content-Type": "application/json", ...(opts.headers || {}) },
     });
-    if (res.status === 401) { this.token = null; return null; }
+    if (res.status === 401) {
+      this.token = null;
+      if (this.enabled) this.showReconnect();
+      return null;
+    }
+    this.hideReconnect();
     if (res.status === 204) return {};
     return res.ok ? res.json() : null;
   },
@@ -591,14 +606,16 @@ const GCal = {
 
   /// 表示月を取得してUIを更新
   async syncMonth() {
-    if (!this.connected || !this.clientId) return;
+    if (!this.enabled || !this.clientId) return;
     const r = await this.fetchMonth(state.dispY, state.dispM);
     if (r) { renderMonth(); if (state.sel) renderDetail(); }
   },
 
   disconnect() {
     this.token = null;
+    this.enabled = false;
     this.cache.clear();
+    this.hideReconnect();
     renderMonth(); if (state.sel) renderDetail();
   },
 };
@@ -674,6 +691,8 @@ function initSettingsSheet() {
     $("gcalStatus").textContent = "Googleにログイン中…";
     const tok = await GCal.ensureToken(true);
     if (tok) {
+      GCal.enabled = true;
+      GCal.hideReconnect();
       await GCal.syncMonth();
       $("gcalStatus").textContent = "接続しました。今月の予定を同期済みです";
     } else {
@@ -711,6 +730,15 @@ function init() {
   }, 60000);
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
   // Google連携済みなら表示月を取得（GISスクリプトの読込を少し待つ）
-  if (GCal.connected && GCal.clientId) setTimeout(() => GCal.syncMonth(), 800);
+  if (GCal.enabled && GCal.clientId) setTimeout(() => GCal.syncMonth(), 800);
+  // アプリを前面に戻したとき・タブに戻ったときに自動同期（サイレント再取得込み）
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") GCal.syncMonth();
+  });
+  // 再接続バナーのタップで対話的に再認証
+  $("gcalBanner").addEventListener("click", async () => {
+    const tok = await GCal.ensureToken(true);
+    if (tok) { GCal.hideReconnect(); GCal.syncMonth(); }
+  });
 }
 init();

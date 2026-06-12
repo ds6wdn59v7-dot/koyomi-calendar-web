@@ -73,6 +73,9 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
   0%, 100% { transform:translateY(0) rotate(-5deg); }
   50% { transform:translateY(-4px) rotate(5deg); }
 }
+#gcalBanner { display:block; width:100%; padding:8px 12px; font-size:12px; font-weight:700;
+  background:var(--chip-bg); color:var(--red); border-top:1px solid var(--line2); text-align:center; }
+#gcalBanner[hidden] { display:none; }
 
 /* ===== 週・グリッド ===== */
 .wrow { display:grid; grid-template-columns:repeat(7,1fr); border-bottom:1px solid var(--line); }
@@ -246,6 +249,7 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
     </div>
     <button class="gear-btn" id="gearBtn">&#9881;</button>
   </div>
+  <button id="gcalBanner" hidden>⚠ Googleカレンダーの再接続が必要です（タップして再接続）</button>
   <div class="wrow" id="weekRow"></div>
   <div class="grid-wrap"><div class="grid" id="grid"></div></div>
 </div>
@@ -308,7 +312,7 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 </div>
 
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="koyomi.js?v=10"></script>
-<script src="app.js?v=10"></script>
+<script src="koyomi.js?v=11"></script>
+<script src="app.js?v=11"></script>
 </body>
 </html>
