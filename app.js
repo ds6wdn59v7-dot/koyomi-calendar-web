@@ -18,6 +18,10 @@ const CAL_SOURCES = {
   family: { name: "家族", color: "#1f8a5b" },
 };
 const PRESET_EMOJIS = ["🍽️", "🤝", "🎂", "🍻", "🏥", "💼", "🧘", "✈️", "⚽️", "🎌", "📚", "🎵", "🐟", "⛩️"];
+// 文字アイコン（休み・出勤など）。絵文字と同様にアイコン欄で使える
+const PRESET_CHARS = ["休", "出", "有", "祝", "締", "稽"];
+// 絵文字かどうか（文字アイコンは色付きバッジで描画する）
+const isPictographic = (s) => /\p{Extended_Pictographic}/u.test(s);
 // 月ごとの季節アイコン（月間ビュー左上にゆらゆら表示）
 const MONTH_ICONS = ["", "🎍", "👹", "🎎", "🌸", "🎏", "☔️", "🎋", "🌻", "🌕", "🍁", "🍂", "⛄️"];
 
@@ -25,7 +29,7 @@ const state = {
   today: Koyomi.today(),
   dispY: 0, dispM: 0,
   sel: null,                 // 詳細表示中の日付 {y,m,d}
-  settings: Object.assign({ palette: "paper", density: "standard", font: "gothic", regionId: "tokyo" }, Store.loadSettings()),
+  settings: Object.assign({ palette: "paper", density: "standard", font: "gothic", fontSize: "standard", regionId: "tokyo" }, Store.loadSettings()),
   events: Store.loadEvents(),
   editingId: null,
 };
@@ -85,9 +89,12 @@ function renderMonth() {
     if (sameDate(d.date, state.today)) cls.push("today");
     const rokuCls = d.rokuyo === "大安" ? "taian" : d.rokuyo === "仏滅" ? "butsu" : "";
 
-    const marks = eventsFor(d.date).slice(0, 3).map((e) =>
-      e.emoji ? `<span>${esc(e.emoji)}</span>` : `<i style="background:${(CAL_SOURCES[e.cal] || {}).color || "var(--sub)"}"></i>`
-    ).join("");
+    const marks = eventsFor(d.date).slice(0, 3).map((e) => {
+      const color = (CAL_SOURCES[e.cal] || {}).color || "var(--sub)";
+      if (!e.emoji) return `<i style="background:${color}"></i>`;
+      if (isPictographic(e.emoji)) return `<span>${esc(e.emoji)}</span>`;
+      return `<b class="tmark" style="background:${color}">${esc(e.emoji)}</b>`;
+    }).join("");
 
     let badge = "";
     if (d.sekki) badge = `<span class="sekki">${d.sekki.name}</span>`;
@@ -357,7 +364,9 @@ function openEventSheet(editId = null) {
   const calOpts = Object.entries(CAL_SOURCES).map(([k, s]) =>
     `<option value="${k}" ${v.cal === k ? "selected" : ""}>${s.name}</option>`).join("");
   const emojiBtns = PRESET_EMOJIS.map((e) =>
-    `<button type="button" data-emoji="${e}" class="${v.emoji === e ? "sel" : ""}">${e}</button>`).join("");
+    `<button type="button" data-emoji="${e}" class="${v.emoji === e ? "sel" : ""}">${e}</button>`).join("")
+    + PRESET_CHARS.map((c) =>
+    `<button type="button" data-emoji="${c}" class="tpre ${v.emoji === c ? "sel" : ""}">${c}</button>`).join("");
 
   $("evSheet").innerHTML = `
     <h3>${ev ? "予定を編集" : `${dt.m}月${dt.d}日の予定`}</h3>
@@ -451,6 +460,7 @@ function applySettings() {
   document.body.dataset.palette = s.palette;
   document.body.dataset.density = s.density;
   document.body.dataset.font = s.font;
+  document.body.style.zoom = { small: 0.9, standard: 1, large: 1.13 }[s.fontSize] || 1;
   document.querySelector('meta[name="theme-color"]').setAttribute("content",
     getComputedStyle(document.body).getPropertyValue("--paper").trim() || "#faf6ec");
 }
@@ -461,17 +471,19 @@ function initSettingsSheet() {
   $("setPalette").value = state.settings.palette;
   $("setDensity").value = state.settings.density;
   $("setFont").value = state.settings.font;
+  $("setFontSize").value = state.settings.fontSize;
   $("setRegion").value = state.settings.regionId;
   const onChange = () => {
     state.settings = {
       palette: $("setPalette").value, density: $("setDensity").value,
-      font: $("setFont").value, regionId: $("setRegion").value,
+      font: $("setFont").value, fontSize: $("setFontSize").value,
+      regionId: $("setRegion").value,
     };
     Store.saveSettings(state.settings);
     applySettings(); renderMonth();
     if (state.sel) renderDetail();
   };
-  ["setPalette", "setDensity", "setFont", "setRegion"].forEach((id) =>
+  ["setPalette", "setDensity", "setFont", "setFontSize", "setRegion"].forEach((id) =>
     $(id).addEventListener("change", onChange));
   $("gearBtn").addEventListener("click", () => $("setOverlay").classList.add("open"));
   $("setClose").addEventListener("click", () => $("setOverlay").classList.remove("open"));

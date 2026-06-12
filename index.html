@@ -93,6 +93,8 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 .cell .moon { height:13px; margin-top:1px; }
 .cell .marks { height:11px; display:flex; gap:2px; align-items:center; margin-top:1px; font-size:9px; }
 .cell .marks i { width:5px; height:5px; border-radius:50%; display:block; }
+.cell .marks .tmark { font-size:8px; font-weight:800; color:#fff; border-radius:50%;
+  width:11px; height:11px; line-height:11px; text-align:center; display:block; font-style:normal; }
 .cell .badge { height:14px; margin-top:1px; display:flex; align-items:center; }
 .cell .badge .sekki { font-size:8px; font-weight:800; padding:1px 5px; border-radius:4px;
   background:var(--gold); color:var(--paper); letter-spacing:.5px; white-space:nowrap; }
@@ -214,6 +216,9 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 .emoji-row { display:flex; gap:8px; overflow-x:auto; padding:10px 0; -webkit-overflow-scrolling:touch; }
 .emoji-row button { font-size:24px; padding:5px 7px; border-radius:50%; flex:none; }
 .emoji-row button.sel { background:var(--chip-bg); box-shadow:inset 0 0 0 1.5px var(--red); }
+.emoji-row button.tpre { font-size:17px; font-weight:800; color:var(--red);
+  border:1.5px solid var(--red); border-radius:50%; width:38px; height:38px; padding:0;
+  font-family:"Shippori Mincho",serif; }
 .sheet-actions { display:flex; gap:10px; margin-top:16px; }
 .sheet-actions button { flex:1; padding:12px; border-radius:12px; font-size:14px; font-weight:700; }
 .btn-cancel { background:var(--grid-bg); border:1px solid var(--line); color:var(--sub); }
@@ -276,6 +281,10 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
       <select id="setFont">
         <option value="gothic">ゴシック</option><option value="mincho">明朝</option>
       </select></div>
+    <div class="frow"><label>文字サイズ</label>
+      <select id="setFontSize">
+        <option value="small">小</option><option value="standard" selected>標準</option><option value="large">大</option>
+      </select></div>
     <div class="frow"><label>地域（潮汐・日の出入り）</label>
       <select id="setRegion"></select></div>
     <div class="sheet-actions">
@@ -289,7 +298,7 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
   <div class="modal" id="infoModal"></div>
 </div>
 
-<script src="koyomi.js?v=7"></script>
-<script src="app.js?v=7"></script>
+<script src="koyomi.js?v=8"></script>
+<script src="app.js?v=8"></script>
 </body>
 </html>
