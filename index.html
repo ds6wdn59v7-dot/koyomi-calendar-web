@@ -87,6 +87,9 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 .cell .num { font-size:18px; font-weight:700; line-height:1.2; }
 .cell.sun .num { color:var(--red); } .cell.sat .num { color:var(--sat); }
 .cell .old { font-size:9px; color:var(--sub); height:12px; }
+.cell .old.full { color:#d9a516; font-weight:800; }
+.cell .old.new { color:var(--red); font-weight:800; }
+.cell .moon svg { overflow:visible; }
 .cell .moon { height:13px; margin-top:1px; }
 .cell .marks { height:11px; display:flex; gap:2px; align-items:center; margin-top:1px; font-size:9px; }
 .cell .marks i { width:5px; height:5px; border-radius:50%; display:block; }
@@ -281,7 +284,7 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
   <div class="modal" id="infoModal"></div>
 </div>
 
-<script src="koyomi.js?v=5"></script>
-<script src="app.js?v=5"></script>
+<script src="koyomi.js?v=6"></script>
+<script src="app.js?v=6"></script>
 </body>
 </html>

@@ -51,10 +51,13 @@ function moonSVG(age, size, opts = {}) {
   const sweepTerm = rightTerm ? 0 : 1;
   const lit = `M ${cx},${cy - r} A ${r},${r} 0 0 ${sweepLimb} ${cx},${cy + r} A ${rx},${r} 0 0 ${sweepTerm} ${cx},${cy - r} Z`;
   const ink = opts.ink || "var(--ink)";
+  const ring = opts.ring
+    ? `<circle cx="${cx}" cy="${cy}" r="${r - 0.8}" fill="none" stroke="${opts.ring}" stroke-width="1.4"/>`
+    : `<circle cx="${cx}" cy="${cy}" r="${r - 0.4}" fill="none" stroke="var(--line)" stroke-width="0.8"/>`;
   return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="display:block">
     <circle cx="${cx}" cy="${cy}" r="${r - 0.4}" fill="var(--faint)" opacity="0.42"/>
     <path d="${lit}" fill="${ink}"/>
-    <circle cx="${cx}" cy="${cy}" r="${r - 0.4}" fill="none" stroke="var(--line)" stroke-width="0.8"/>
+    ${ring}
   </svg>`;
 }
 
@@ -89,9 +92,15 @@ function renderMonth() {
     if (d.sekki) badge = `<span class="sekki">${d.sekki.name}</span>`;
     else if (d.event) badge = `<span class="evdot"></span>`;
 
+    // 旧暦15日=望（金色の満月）、旧暦1日=朔（新月）を強調
+    const isFull = d.lunar.d === 15;
+    const isNew = d.lunar.d === 1;
+    const oldCls = isFull ? "old full" : isNew ? "old new" : "old";
+    const oldTxt = isNew ? `${d.lunar.m}月` : d.lunar.d;
+    const moonOpts = isFull ? { ink: "#e9b830", ring: "#e9b830" } : isNew ? { ring: "var(--red)" } : {};
     const mid = density === "simple" ? "" : `
-      <div class="old">${d.lunar.d === 1 ? d.lunar.m + "月" : d.lunar.d}</div>
-      <div class="moon">${moonSVG(d.moonAge, 12)}</div>`;
+      <div class="${oldCls}">${oldTxt}</div>
+      <div class="moon">${moonSVG(d.moonAge, 12, moonOpts)}</div>`;
 
     cells.push(`<div class="${cls.join(" ")}" data-d="${d.day}">
       ${density === "simple" ? "" : `<div class="roku ${rokuCls}">${d.rokuyo}</div>`}
@@ -411,6 +420,23 @@ function saveEvent() {
   closeEventSheet(); renderDetail(); renderMonth();
 }
 
+// ===== スワイプ =====
+// 横スワイプ（縦スクロールと区別するため、横移動が大きく縦移動が小さい時のみ発火）
+function addSwipe(el, onLeft, onRight) {
+  let sx = 0, sy = 0, st = 0;
+  el.addEventListener("touchstart", (e) => {
+    const p = e.touches[0];
+    sx = p.clientX; sy = p.clientY; st = Date.now();
+  }, { passive: true });
+  el.addEventListener("touchend", (e) => {
+    const p = e.changedTouches[0];
+    const dx = p.clientX - sx, dy = p.clientY - sy;
+    if (Date.now() - st < 600 && Math.abs(dx) > 60 && Math.abs(dy) < 50) {
+      (dx < 0 ? onLeft : onRight)();
+    }
+  }, { passive: true });
+}
+
 // ===== 設定 =====
 function applySettings() {
   const s = state.settings;
@@ -452,6 +478,9 @@ function init() {
   $("nextBtn").addEventListener("click", () => moveMonth(1));
   $("backBtn").addEventListener("click", closeDetail);
   $("addEvBtn").addEventListener("click", () => openEventSheet(null));
+  // 左スワイプ=次へ / 右スワイプ=前へ
+  addSwipe(document.querySelector(".grid-wrap"), () => moveMonth(1), () => moveMonth(-1));
+  addSwipe($("dBody"), () => moveDay(1), () => moveDay(-1));
   [["evOverlay", closeEventSheet],
    ["setOverlay", () => $("setOverlay").classList.remove("open")],
    ["infoOverlay", () => $("infoOverlay").classList.remove("open")]].forEach(([id, fn]) => {
