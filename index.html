@@ -145,6 +145,8 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 .evrow .time small { display:block; font-size:10px; font-weight:600; color:var(--sub); }
 .evrow .et { font-size:13.5px; font-weight:700; }
 .evrow .et small { display:block; font-size:10px; color:var(--sub); font-weight:400; }
+.evrow .rep-tag { font-size:10px; font-weight:700; color:var(--sat); margin-left:4px;
+  border:1px solid var(--line); border-radius:8px; padding:0 5px; white-space:nowrap; }
 
 .irow { display:flex; gap:14px; padding:8px 0; border-bottom:1px solid var(--line2); }
 .irow .lbl { width:50px; flex:none; font-size:11px; font-weight:700; letter-spacing:2px; color:var(--sub); padding-top:2px; }
@@ -300,6 +302,11 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
       </div>
       <div id="gcalStatus" style="font-size:11px;color:var(--sub)"></div>
     </div>
+    <div style="text-align:center;font-size:11px;margin-top:14px">
+      <a href="privacy.html" style="color:var(--sub)">プライバシーポリシー</a>
+      <span style="color:var(--faint)">　・　</span>
+      <a href="terms.html" style="color:var(--sub)">利用規約</a>
+    </div>
     <div class="sheet-actions">
       <button class="btn-save" id="setClose">閉じる</button>
     </div>
@@ -312,7 +319,7 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 </div>
 
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="koyomi.js?v=11"></script>
-<script src="app.js?v=11"></script>
+<script src="koyomi.js?v=12"></script>
+<script src="app.js?v=12"></script>
 </body>
 </html>

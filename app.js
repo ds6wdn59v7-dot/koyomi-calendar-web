@@ -43,8 +43,25 @@ state.dispM = state.today.m;
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const sameDate = (a, b) => a && b && a.y === b.y && a.m === b.m && a.d === b.d;
+// 繰り返し予定が指定日に発生するか（JSTにDSTがないため日数差はミリ秒で判定可）
+const DAY_MS = 86400000;
+function occursOn(e, dt) {
+  const rep = e.repeat || "none";
+  if (rep === "none") return e.y === dt.y && e.m === dt.m && e.d === dt.d;
+  const start = new Date(e.y, e.m - 1, e.d);
+  const t = new Date(dt.y, dt.m - 1, dt.d);
+  if (t < start) return false;
+  if (e.repeatUntil) { const u = new Date(e.repeatUntil + "T23:59:59"); if (t > u) return false; }
+  switch (rep) {
+    case "daily": return true;
+    case "weekly": return Math.round((t - start) / DAY_MS) % 7 === 0;
+    case "monthly": return t.getDate() === start.getDate();
+    case "yearly": return t.getDate() === start.getDate() && t.getMonth() === start.getMonth();
+    default: return false;
+  }
+}
 const eventsFor = (dt) => state.events
-  .filter((e) => e.y === dt.y && e.m === dt.m && e.d === dt.d)
+  .filter((e) => occursOn(e, dt))
   .sort((a, b) => (a.min ?? -1) - (b.min ?? -1));
 
 // ===== 月SVG =====
@@ -186,10 +203,11 @@ function renderDetail() {
     const c = CAL_SOURCES[e.cal] || { color: "var(--sub)", name: "" };
     const time = e.min == null ? "終日" : Koyomi.fmtTime(e.min);
     const endT = e.min != null && e.end != null ? `<small>${Koyomi.fmtTime(e.end)}</small>` : "";
+    const repLabel = { daily: "毎日", weekly: "毎週", monthly: "毎月", yearly: "毎年" }[e.repeat];
     evRows += `<div class="evrow" data-eid="${esc(e.id)}">
       <div class="bar" style="background:${c.color}"></div>
       <div class="time">${time}${endT}</div>
-      <div class="et">${e.emoji ? esc(e.emoji) + " " : ""}${esc(e.title)}
+      <div class="et">${e.emoji ? esc(e.emoji) + " " : ""}${esc(e.title)}${repLabel ? ` <span class="rep-tag">↻${repLabel}</span>` : ""}
         <small>${e.place ? "📍 " + esc(e.place) + "　" : ""}${c.name}</small></div>
     </div>`;
   }
@@ -378,7 +396,11 @@ function openEventSheet(editId = null) {
     cal: ev ? ev.cal : "privat",
     emoji: ev ? ev.emoji || "" : "",
     place: ev ? ev.place || "" : "",
+    repeat: ev ? ev.repeat || "none" : "none",
+    repeatUntil: ev ? ev.repeatUntil || "" : "",
   };
+  const repOpts = [["none", "なし"], ["daily", "毎日"], ["weekly", "毎週"], ["monthly", "毎月"], ["yearly", "毎年"]]
+    .map(([k, l]) => `<option value="${k}" ${v.repeat === k ? "selected" : ""}>${l}</option>`).join("");
   const calOpts = Object.entries(CAL_SOURCES).map(([k, s]) =>
     `<option value="${k}" ${v.cal === k ? "selected" : ""}>${s.name}</option>`).join("");
   const emojiBtns = PRESET_EMOJIS.map((e) =>
@@ -393,6 +415,8 @@ function openEventSheet(editId = null) {
     <div class="frow" id="timeRow1"><label>開始</label><input type="time" id="evStart" value="${v.start}"></div>
     <div class="frow" id="timeRow2"><label>終了</label><input type="time" id="evEnd" value="${v.end}"></div>
     <div class="frow"><label>場所</label><input type="text" id="evPlace" value="${esc(v.place)}" placeholder="例: 渋谷"></div>
+    <div class="frow"><label>繰り返し</label><select id="evRepeat">${repOpts}</select></div>
+    <div class="frow" id="repUntilRow"><label>繰り返しの終了</label><input type="date" id="evRepeatUntil" value="${v.repeatUntil}"></div>
     <div class="frow"><label>カレンダー</label><select id="evCal">${calOpts}</select></div>
     <div class="frow" style="border:none"><label>アイコン</label><input type="text" id="evEmoji" value="${esc(v.emoji)}" placeholder="絵文字" style="max-width:80px;text-align:center"></div>
     <div class="emoji-row" id="emojiRow">${emojiBtns}</div>
@@ -409,6 +433,11 @@ function openEventSheet(editId = null) {
   };
   syncTimeRows();
   $("evAllDay").addEventListener("change", syncTimeRows);
+  const syncRepeatRow = () => {
+    $("repUntilRow").style.display = $("evRepeat").value === "none" ? "none" : "";
+  };
+  syncRepeatRow();
+  $("evRepeat").addEventListener("change", syncRepeatRow);
   $("emojiRow").querySelectorAll("button").forEach((b) => {
     b.addEventListener("click", () => {
       $("evEmoji").value = b.dataset.emoji;
@@ -443,11 +472,16 @@ function saveEvent() {
   }
   const emoji = [...$("evEmoji").value.trim()].slice(0, 2).join("") || null; // サロゲート対応で先頭1絵文字
   const editing = state.editingId ? state.events.find((e) => e.id === state.editingId) : null;
+  const repeat = $("evRepeat").value;
+  const repeatUntil = repeat !== "none" ? ($("evRepeatUntil").value || null) : null;
+  // 編集時は元の開始日を維持（繰り返しインスタンスから開いても基準日がずれないように）
+  const base = editing || dt;
   const ev = {
     id: state.editingId || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())),
-    y: dt.y, m: dt.m, d: dt.d, min, end, title,
+    y: base.y, m: base.m, d: base.d, min, end, title,
     cal: $("evCal").value, emoji,
     place: $("evPlace").value.trim() || null,
+    repeat, repeatUntil,
     gcalId: editing ? editing.gcalId || null : null,
   };
   if (state.editingId) {
@@ -583,8 +617,17 @@ const GCal = {
       body.end = { date: `${next.getFullYear()}-${pad(next.getMonth() + 1)}-${pad(next.getDate())}` };
     } else {
       const t = (mins) => `${date}T${pad(Math.floor(mins / 60))}:${pad(mins % 60)}:00+09:00`;
-      body.start = { dateTime: t(ev.min) };
-      body.end = { dateTime: t(ev.end ?? ev.min + 60) };
+      body.start = { dateTime: t(ev.min), timeZone: "Asia/Tokyo" };
+      body.end = { dateTime: t(ev.end ?? ev.min + 60), timeZone: "Asia/Tokyo" };
+    }
+    // 繰り返し（RRULE）
+    if (ev.repeat && ev.repeat !== "none") {
+      const freq = { daily: "DAILY", weekly: "WEEKLY", monthly: "MONTHLY", yearly: "YEARLY" }[ev.repeat];
+      let rule = `RRULE:FREQ=${freq}`;
+      if (ev.repeatUntil) rule += `;UNTIL=${ev.repeatUntil.replace(/-/g, "")}T235959Z`;
+      body.recurrence = [rule];
+    } else {
+      body.recurrence = null; // 編集で繰り返し解除した場合に消す
     }
     return body;
   },
