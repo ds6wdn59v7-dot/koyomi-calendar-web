@@ -29,7 +29,11 @@ const state = {
   today: Koyomi.today(),
   dispY: 0, dispM: 0,
   sel: null,                 // 詳細表示中の日付 {y,m,d}
-  settings: Object.assign({ palette: "paper", density: "standard", font: "gothic", fontSize: "standard", regionId: "tokyo" }, Store.loadSettings()),
+  settings: Object.assign({
+    palette: "paper", density: "standard", font: "gothic", fontSize: "standard", regionId: "tokyo",
+    // WebアプリのOAuthクライアントIDは公開して問題ない識別子（秘密情報ではない）
+    gcalClientId: "60450009298-ap985moaa7nq31kpc2o4j8c0mnjd6emf.apps.googleusercontent.com",
+  }, Store.loadSettings()),
   events: Store.loadEvents(),
   editingId: null,
 };
