@@ -287,6 +287,15 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
       </select></div>
     <div class="frow"><label>地域（潮汐・日の出入り）</label>
       <select id="setRegion"></select></div>
+    <div class="frow" style="flex-direction:column;align-items:stretch;gap:6px">
+      <label>Googleカレンダー連携</label>
+      <input type="text" id="setGcalId" placeholder="OAuthクライアントID（〜.apps.googleusercontent.com）" style="font-size:11px">
+      <div style="display:flex;gap:8px;align-items:center">
+        <button id="gcalConnect" style="flex:1;padding:9px;border-radius:10px;background:var(--chip-bg);color:var(--ink);font-size:13px;font-weight:700;border:1px solid var(--line)">接続して同期</button>
+        <button id="gcalDisconnect" style="padding:9px 12px;border-radius:10px;color:var(--sub);font-size:12px;border:1px solid var(--line)">解除</button>
+      </div>
+      <div id="gcalStatus" style="font-size:11px;color:var(--sub)"></div>
+    </div>
     <div class="sheet-actions">
       <button class="btn-save" id="setClose">閉じる</button>
     </div>
@@ -298,7 +307,8 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
   <div class="modal" id="infoModal"></div>
 </div>
 
-<script src="koyomi.js?v=8"></script>
-<script src="app.js?v=8"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="koyomi.js?v=9"></script>
+<script src="app.js?v=9"></script>
 </body>
 </html>

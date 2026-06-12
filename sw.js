@@ -1,6 +1,6 @@
 /* sw.js — オフラインキャッシュ（静的アプリなので cache-first） */
-const CACHE = "koyomi-v8";
-const ASSETS = ["./", "./index.html", "./app.js?v=8", "./koyomi.js?v=8", "./manifest.webmanifest", "./icon.svg", "./apple-touch-icon.png"];
+const CACHE = "koyomi-v9";
+const ASSETS = ["./", "./index.html", "./app.js?v=9", "./koyomi.js?v=9", "./manifest.webmanifest", "./icon.svg", "./apple-touch-icon.png"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
@@ -12,6 +12,9 @@ self.addEventListener("activate", (e) => {
   );
 });
 self.addEventListener("fetch", (e) => {
+  // Google API等の外部リクエストとGET以外はキャッシュ対象外（常にネットワークへ）
+  const url = new URL(e.request.url);
+  if (e.request.method !== "GET" || url.origin !== self.location.origin) return;
   e.respondWith(
     caches.match(e.request).then((hit) => hit || fetch(e.request).then((res) => {
       const copy = res.clone();

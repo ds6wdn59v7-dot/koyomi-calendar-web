@@ -89,12 +89,13 @@ function renderMonth() {
     if (sameDate(d.date, state.today)) cls.push("today");
     const rokuCls = d.rokuyo === "大安" ? "taian" : d.rokuyo === "仏滅" ? "butsu" : "";
 
-    const marks = eventsFor(d.date).slice(0, 3).map((e) => {
+    const gMarks = GCal.eventsFor(d.date).map(() => `<i style="background:${GCal.COLOR}"></i>`);
+    const marks = eventsFor(d.date).map((e) => {
       const color = (CAL_SOURCES[e.cal] || {}).color || "var(--sub)";
       if (!e.emoji) return `<i style="background:${color}"></i>`;
       if (isPictographic(e.emoji)) return `<span>${esc(e.emoji)}</span>`;
       return `<b class="tmark" style="background:${color}">${esc(e.emoji)}</b>`;
-    }).join("");
+    }).concat(gMarks).slice(0, 3).join("");
 
     let badge = "";
     if (d.sekki) badge = `<span class="sekki">${d.sekki.name}</span>`;
@@ -130,6 +131,7 @@ function moveMonth(delta) {
   if (m > 12) { m = 1; y += 1; }
   state.dispY = y; state.dispM = m;
   renderMonth();
+  GCal.syncMonth();
 }
 
 // ===== 日詳細 =====
@@ -187,9 +189,21 @@ function renderDetail() {
         <small>${e.place ? "📍 " + esc(e.place) + "　" : ""}${c.name}</small></div>
     </div>`;
   }
+  // Googleカレンダーの予定（読み取り専用）
+  let gRows = "";
+  for (const e of GCal.eventsFor(dt)) {
+    const time = e.min == null ? "終日" : Koyomi.fmtTime(e.min);
+    const endT = e.min != null && e.end != null ? `<small>${Koyomi.fmtTime(e.end)}</small>` : "";
+    gRows += `<div class="evrow">
+      <div class="bar" style="background:${GCal.COLOR}"></div>
+      <div class="time">${time}${endT}</div>
+      <div class="et">${esc(e.title)}<small>${e.place ? "📍 " + esc(e.place) + "　" : ""}Google</small></div>
+    </div>`;
+  }
+  const gLegend = GCal.connected ? `<span><i style="background:${GCal.COLOR}"></i>Google</span>` : "";
   const schedule = `<div class="card">
-    <div class="chead"><span class="ctitle serif">予定</span><span class="legend">${legend}</span></div>
-    ${evRows || `<div class="noev">この日の予定はありません（右上の＋で追加）</div>`}
+    <div class="chead"><span class="ctitle serif">予定</span><span class="legend">${legend}${gLegend}</span></div>
+    ${evRows + gRows || `<div class="noev">この日の予定はありません（右上の＋で追加）</div>`}
   </div>`;
 
   // 情報行
@@ -400,6 +414,8 @@ function openEventSheet(editId = null) {
   $("evCancel").addEventListener("click", closeEventSheet);
   $("evSave").addEventListener("click", saveEvent);
   if (ev) $("evDelete").addEventListener("click", () => {
+    const target = state.events.find((e) => e.id === editId);
+    if (target && GCal.connected) GCal.remove(target);
     state.events = state.events.filter((e) => e.id !== editId);
     Store.saveEvents(state.events);
     closeEventSheet(); renderDetail(); renderMonth();
@@ -422,11 +438,13 @@ function saveEvent() {
     if (end <= min) end = min + 60;
   }
   const emoji = [...$("evEmoji").value.trim()].slice(0, 2).join("") || null; // サロゲート対応で先頭1絵文字
+  const editing = state.editingId ? state.events.find((e) => e.id === state.editingId) : null;
   const ev = {
     id: state.editingId || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())),
     y: dt.y, m: dt.m, d: dt.d, min, end, title,
     cal: $("evCal").value, emoji,
     place: $("evPlace").value.trim() || null,
+    gcalId: editing ? editing.gcalId || null : null,
   };
   if (state.editingId) {
     state.events = state.events.map((e) => (e.id === state.editingId ? ev : e));
@@ -435,7 +453,151 @@ function saveEvent() {
   }
   Store.saveEvents(state.events);
   closeEventSheet(); renderDetail(); renderMonth();
+  // Googleカレンダーへ反映（非同期・失敗してもローカルは保持）
+  if (GCal.connected) {
+    (ev.gcalId ? GCal.update(ev) : GCal.push(ev)).then((gid) => {
+      if (gid && gid !== ev.gcalId) {
+        state.events = state.events.map((e) => (e.id === ev.id ? { ...e, gcalId: gid } : e));
+        Store.saveEvents(state.events);
+      }
+    });
+  }
 }
+
+// ===== Googleカレンダー連携 =====
+// クライアントIDは設定画面で入力（localStorageに保存）。トークンはブラウザ内のみ。
+const GCal = {
+  COLOR: "#4285f4",
+  cache: new Map(),          // "y-m" -> [{d, min, end, title}]
+  tokenClient: null,
+
+  get clientId() { return (state.settings.gcalClientId || "").trim(); },
+  get token() {
+    try { return JSON.parse(localStorage.getItem("gcalToken")); } catch { return null; }
+  },
+  set token(t) {
+    if (t) localStorage.setItem("gcalToken", JSON.stringify(t));
+    else localStorage.removeItem("gcalToken");
+  },
+  get connected() { return !!this.token; },
+  get tokenValid() { const t = this.token; return t && t.expires_at > Date.now() + 60000; },
+
+  /// アクセストークンを取得（interactive=trueでポップアップ許可）
+  ensureToken(interactive) {
+    return new Promise((resolve) => {
+      if (this.tokenValid) return resolve(this.token.access_token);
+      if (!this.clientId || !window.google?.accounts?.oauth2) return resolve(null);
+      this.tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: this.clientId,
+        scope: "https://www.googleapis.com/auth/calendar.events",
+        callback: (resp) => {
+          if (resp.access_token) {
+            this.token = { access_token: resp.access_token, expires_at: Date.now() + (resp.expires_in - 60) * 1000 };
+            resolve(resp.access_token);
+          } else resolve(null);
+        },
+        error_callback: () => resolve(null),
+      });
+      this.tokenClient.requestAccessToken({ prompt: interactive ? "consent" : "" });
+    });
+  },
+
+  async api(path, opts = {}) {
+    const tok = await this.ensureToken(false);
+    if (!tok) return null;
+    const res = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary" + path, {
+      ...opts,
+      headers: { Authorization: "Bearer " + tok, "Content-Type": "application/json", ...(opts.headers || {}) },
+    });
+    if (res.status === 401) { this.token = null; return null; }
+    if (res.status === 204) return {};
+    return res.ok ? res.json() : null;
+  },
+
+  /// 表示月のGoogle予定を取得（このアプリから書き込んだ分は除外して二重表示を防ぐ）
+  async fetchMonth(y, m) {
+    const key = `${y}-${m}`;
+    const pad = (n) => String(n).padStart(2, "0");
+    const last = Koyomi.daysInMonth(y, m);
+    const q = new URLSearchParams({
+      timeMin: `${y}-${pad(m)}-01T00:00:00+09:00`,
+      timeMax: `${y}-${pad(m)}-${pad(last)}T23:59:59+09:00`,
+      singleEvents: "true", orderBy: "startTime", maxResults: "250",
+    });
+    const data = await this.api(`/events?${q}`);
+    if (!data) return null;
+    const evs = [];
+    for (const it of data.items || []) {
+      if (it.extendedProperties?.private?.koyomiId) continue; // 自分が書いた予定
+      if (it.status === "cancelled") continue;
+      let d, min = null, end = null;
+      if (it.start?.dateTime) {
+        const s = new Date(it.start.dateTime), e = new Date(it.end?.dateTime || it.start.dateTime);
+        d = s.getDate(); min = s.getHours() * 60 + s.getMinutes(); end = e.getHours() * 60 + e.getMinutes();
+        if (s.getMonth() + 1 !== m) continue;
+      } else if (it.start?.date) {
+        const s = new Date(it.start.date + "T00:00:00");
+        d = s.getDate();
+        if (s.getMonth() + 1 !== m) continue;
+      } else continue;
+      evs.push({ d, min, end, title: it.summary || "(無題)", place: it.location || null });
+    }
+    this.cache.set(key, evs);
+    return evs;
+  },
+
+  eventsFor(dt) {
+    return (this.cache.get(`${dt.y}-${dt.m}`) || []).filter((e) => e.d === dt.d);
+  },
+
+  toBody(ev) {
+    const pad = (n) => String(n).padStart(2, "0");
+    const date = `${ev.y}-${pad(ev.m)}-${pad(ev.d)}`;
+    const body = {
+      summary: (ev.emoji ? ev.emoji + " " : "") + ev.title,
+      location: ev.place || undefined,
+      extendedProperties: { private: { koyomiId: ev.id } },
+    };
+    if (ev.min == null) {
+      body.start = { date };
+      const next = new Date(ev.y, ev.m - 1, ev.d + 1);
+      body.end = { date: `${next.getFullYear()}-${pad(next.getMonth() + 1)}-${pad(next.getDate())}` };
+    } else {
+      const t = (mins) => `${date}T${pad(Math.floor(mins / 60))}:${pad(mins % 60)}:00+09:00`;
+      body.start = { dateTime: t(ev.min) };
+      body.end = { dateTime: t(ev.end ?? ev.min + 60) };
+    }
+    return body;
+  },
+
+  async push(ev) {
+    if (!this.connected) return null;
+    const r = await this.api("/events", { method: "POST", body: JSON.stringify(this.toBody(ev)) });
+    return r?.id || null;
+  },
+  async update(ev) {
+    if (!this.connected || !ev.gcalId) return this.push(ev);
+    const r = await this.api(`/events/${ev.gcalId}`, { method: "PATCH", body: JSON.stringify(this.toBody(ev)) });
+    return r?.id || null;
+  },
+  async remove(ev) {
+    if (!this.connected || !ev.gcalId) return;
+    await this.api(`/events/${ev.gcalId}`, { method: "DELETE" });
+  },
+
+  /// 表示月を取得してUIを更新
+  async syncMonth() {
+    if (!this.connected || !this.clientId) return;
+    const r = await this.fetchMonth(state.dispY, state.dispM);
+    if (r) { renderMonth(); if (state.sel) renderDetail(); }
+  },
+
+  disconnect() {
+    this.token = null;
+    this.cache.clear();
+    renderMonth(); if (state.sel) renderDetail();
+  },
+};
 
 // ===== スワイプ =====
 // 横スワイプ（縦スクロールと区別するため、横移動が大きく縦移動が小さい時のみ発火）
@@ -485,8 +647,40 @@ function initSettingsSheet() {
   };
   ["setPalette", "setDensity", "setFont", "setFontSize", "setRegion"].forEach((id) =>
     $(id).addEventListener("change", onChange));
-  $("gearBtn").addEventListener("click", () => $("setOverlay").classList.add("open"));
+  $("gearBtn").addEventListener("click", () => { updateGcalStatus(); $("setOverlay").classList.add("open"); });
   $("setClose").addEventListener("click", () => $("setOverlay").classList.remove("open"));
+
+  // Googleカレンダー連携
+  const updateGcalStatus = () => {
+    $("gcalStatus").textContent = !GCal.clientId
+      ? "未設定: Google CloudのOAuthクライアントIDを入力してください"
+      : GCal.connected ? "接続済み（予定の追加・編集・削除がGoogleカレンダーに反映されます）"
+      : "未接続: 「接続して同期」をタップしてGoogleにログインしてください";
+  };
+  $("setGcalId").value = state.settings.gcalClientId || "";
+  $("setGcalId").addEventListener("change", () => {
+    state.settings.gcalClientId = $("setGcalId").value.trim();
+    Store.saveSettings(state.settings);
+    updateGcalStatus();
+  });
+  $("gcalConnect").addEventListener("click", async () => {
+    state.settings.gcalClientId = $("setGcalId").value.trim();
+    Store.saveSettings(state.settings);
+    if (!GCal.clientId) { updateGcalStatus(); return; }
+    $("gcalStatus").textContent = "Googleにログイン中…";
+    const tok = await GCal.ensureToken(true);
+    if (tok) {
+      await GCal.syncMonth();
+      $("gcalStatus").textContent = "接続しました。今月の予定を同期済みです";
+    } else {
+      $("gcalStatus").textContent = "接続できませんでした（クライアントIDと許可設定を確認してください）";
+    }
+  });
+  $("gcalDisconnect").addEventListener("click", () => {
+    GCal.disconnect();
+    updateGcalStatus();
+  });
+  updateGcalStatus();
 }
 
 // ===== 起動 =====
@@ -512,5 +706,7 @@ function init() {
     if (!sameDate(t, state.today)) { state.today = t; renderMonth(); }
   }, 60000);
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+  // Google連携済みなら表示月を取得（GISスクリプトの読込を少し待つ）
+  if (GCal.connected && GCal.clientId) setTimeout(() => GCal.syncMonth(), 800);
 }
 init();
