@@ -2,7 +2,7 @@
 // 役割: クライアントシークレットを使ったトークン交換・更新のみを行うステートレスな中継役。
 // refresh_token / access_token はクライアント(localStorage)側で保持する。
 
-const ALLOWED_ORIGIN = "https://ds6wdn59v7-dot.github.io";
+const ALLOWED_ORIGIN = "https://nakamochiya.com";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 
 function cors(resp) {

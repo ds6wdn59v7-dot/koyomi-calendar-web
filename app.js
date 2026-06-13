@@ -517,7 +517,7 @@ function saveEvent() {
 // クライアントID・スコープ等は固定値。トークン交換/更新はCloudflare Workers経由（クライアントシークレットはサーバー側のみ）。
 // access_token / refresh_token はブラウザのlocalStorageに保存。
 const GCAL_WORKER = "https://koyomi-gcal-proxy.nakamochiya-mi.workers.dev";
-const GCAL_REDIRECT_URI = "https://ds6wdn59v7-dot.github.io/koyomi-calendar-web/";
+const GCAL_REDIRECT_URI = "https://nakamochiya.com/";
 const GCAL_SCOPE = "https://www.googleapis.com/auth/calendar.events";
 
 const GCal = {
