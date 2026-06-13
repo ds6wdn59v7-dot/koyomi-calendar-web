@@ -829,6 +829,7 @@ function init() {
   $("nextBtn").addEventListener("click", () => moveMonth(1));
   $("backBtn").addEventListener("click", closeDetail);
   $("addEvBtn").addEventListener("click", () => openEventSheet(null));
+  $("dGearBtn").addEventListener("click", () => $("gearBtn").click()); // 月間ビューと同じ設定を開く
   // 左スワイプ=次へ / 右スワイプ=前へ
   addSwipe(document.querySelector(".grid-wrap"), () => moveMonth(1), () => moveMonth(-1));
   addSwipe($("dBody"), () => moveDay(1), () => moveDay(-1));
