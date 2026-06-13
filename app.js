@@ -140,6 +140,7 @@ function renderMonth() {
       <div class="moon">${moonSVG(d.moonAge, 12, moonOpts)}</div>`;
 
     cells.push(`<div class="${cls.join(" ")}" data-d="${d.day}">
+      ${Weather.cellHTML(d.date)}
       ${density === "simple" ? "" : `<div class="roku ${rokuCls}">${d.rokuyo}</div>`}
       <div class="num">${d.day}</div>
       ${mid}
@@ -709,24 +710,28 @@ const Weather = {
     } catch {}
   },
 
+  byDate: {},  // "y-m-d" -> { code, max, min }
+
   render(daily) {
-    const bar = $("weatherBar");
-    if (!daily || !daily.time) { bar.hidden = true; return; }
-    const t = Koyomi.today();
-    let html = "";
-    for (let i = 0; i < daily.time.length; i++) {
-      const [y, m, d] = daily.time[i].split("-").map(Number);
-      const wdIdx = new Date(y, m - 1, d).getDay();
-      const wdCls = wdIdx === 0 ? "sun" : wdIdx === 6 ? "sat" : "";
-      const isToday = y === t.y && m === t.m && d === t.d;
-      html += `<div class="wx ${isToday ? "today" : ""}">
-        <div class="d ${wdCls}">${m}/${d}<br>${Koyomi.WD[wdIdx]}</div>
-        <div class="ic">${this.icon(daily.weather_code[i])}</div>
-        <div class="t"><span class="mx">${Math.round(daily.temperature_2m_max[i])}</span><span class="mn">${Math.round(daily.temperature_2m_min[i])}</span></div>
-      </div>`;
+    this.byDate = {};
+    if (daily && daily.time) {
+      for (let i = 0; i < daily.time.length; i++) {
+        const [y, m, d] = daily.time[i].split("-").map(Number);
+        this.byDate[`${y}-${m}-${d}`] = {
+          code: daily.weather_code[i],
+          max: daily.temperature_2m_max[i],
+          min: daily.temperature_2m_min[i],
+        };
+      }
     }
-    bar.innerHTML = html;
-    bar.hidden = false;
+    renderMonth();  // セルに天気アイコンを反映
+  },
+
+  // セル用の天気HTML（予報のある日だけ）
+  cellHTML(dt) {
+    const w = this.byDate[`${dt.y}-${dt.m}-${dt.d}`];
+    if (!w) return "";
+    return `<div class="wx-ic">${this.icon(w.code)}<b>${Math.round(w.max)}°</b></div>`;
   },
 };
 
