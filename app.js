@@ -761,6 +761,55 @@ function initSettingsSheet() {
   updateGcalStatus();
 }
 
+// ===== ホーム画面に追加 =====
+const Install = {
+  deferred: null,  // Android: beforeinstallprompt イベント
+  get standalone() {
+    return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  },
+  get isIOS() { return /iphone|ipad|ipod/i.test(navigator.userAgent); },
+
+  // 設定の追加ボタンの表示/非表示を更新
+  refresh() {
+    const btn = $("installBtn");
+    if (!btn) return;
+    btn.hidden = this.standalone;  // すでにホーム画面アプリなら隠す
+  },
+
+  // ボタン押下時の挙動：Androidはネイティブ確認、iOS等は手順案内
+  async onClick() {
+    if (this.deferred) {
+      this.deferred.prompt();
+      await this.deferred.userChoice;
+      this.deferred = null;
+      this.refresh();
+      return;
+    }
+    this.showGuide();
+  },
+
+  showGuide() {
+    const shareIcon = `<svg class="ios-share" width="16" height="16" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 16V3M12 3l-4 4M12 3l4 4"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>`;
+    const steps = this.isIOS
+      ? [`Safari下部の共有ボタン ${shareIcon} をタップ`,
+         "メニューを下にスクロール",
+         "「ホーム画面に追加」をタップ",
+         "右上の「追加」をタップ"]
+      : ["ブラウザのメニュー（⋮）を開く",
+         "「アプリをインストール」または「ホーム画面に追加」をタップ"];
+    $("installModal").innerHTML = `
+      <div class="cat serif">ホーム画面に追加</div>
+      <div class="term serif" style="font-size:18px">アプリのように使えます</div>
+      <div class="yomi">追加すると全画面で起動し、オフラインでも開けます。</div>
+      ${steps.map((s, i) => `<div class="step"><b>${i + 1}</b><span>${s}</span></div>`).join("")}
+      <button class="close" id="installClose">閉じる</button>`;
+    $("installOverlay").classList.add("open");
+    $("installClose").addEventListener("click", () => $("installOverlay").classList.remove("open"));
+  },
+};
+
 // ===== 起動 =====
 function init() {
   applySettings();
@@ -775,9 +824,15 @@ function init() {
   addSwipe($("dBody"), () => moveDay(1), () => moveDay(-1));
   [["evOverlay", closeEventSheet],
    ["setOverlay", () => $("setOverlay").classList.remove("open")],
-   ["infoOverlay", () => $("infoOverlay").classList.remove("open")]].forEach(([id, fn]) => {
+   ["infoOverlay", () => $("infoOverlay").classList.remove("open")],
+   ["installOverlay", () => $("installOverlay").classList.remove("open")]].forEach(([id, fn]) => {
     $(id).addEventListener("click", (e) => { if (e.target === $(id)) fn(); });
   });
+  // ホーム画面に追加
+  window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); Install.deferred = e; });
+  window.addEventListener("appinstalled", () => { Install.deferred = null; Install.refresh(); });
+  $("installBtn").addEventListener("click", () => Install.onClick());
+  Install.refresh();
   // 日付が変わったら「本日」を更新
   setInterval(() => {
     const t = Koyomi.today();

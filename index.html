@@ -76,6 +76,13 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 #gcalBanner { display:block; width:100%; padding:8px 12px; font-size:12px; font-weight:700;
   background:var(--chip-bg); color:var(--red); border-top:1px solid var(--line2); text-align:center; }
 #gcalBanner[hidden] { display:none; }
+#installBtn { display:block; width:100%; margin-bottom:14px; padding:12px; border-radius:12px;
+  background:var(--red); color:#fff; font-size:14px; font-weight:700; }
+#installBtn[hidden] { display:none; }
+.modal .step { display:flex; align-items:center; gap:10px; font-size:13.5px; margin:10px 0; }
+.modal .step b { flex:none; width:22px; height:22px; border-radius:50%; background:var(--red); color:#fff;
+  font-size:12px; display:flex; align-items:center; justify-content:center; }
+.modal .ios-share { display:inline-block; vertical-align:-3px; }
 
 /* ===== 週・グリッド ===== */
 .wrow { display:grid; grid-template-columns:repeat(7,1fr); border-bottom:1px solid var(--line); }
@@ -275,6 +282,7 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 <div class="overlay" id="setOverlay">
   <div class="sheet">
     <h3>設定</h3>
+    <button id="installBtn" hidden>📲 ホーム画面に追加</button>
     <div class="frow"><label>配色</label>
       <select id="setPalette">
         <option value="paper">生成り</option><option value="sumi">墨</option><option value="ai">藍</option><option value="pop">ポップ</option>
@@ -320,8 +328,13 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
   <div class="modal" id="infoModal"></div>
 </div>
 
+<!-- ホーム画面追加の案内モーダル（iOS等の手動手順用） -->
+<div class="overlay center" id="installOverlay">
+  <div class="modal" id="installModal"></div>
+</div>
+
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="koyomi.js?v=14"></script>
-<script src="app.js?v=14"></script>
+<script src="koyomi.js?v=15"></script>
+<script src="app.js?v=15"></script>
 </body>
 </html>
