@@ -795,6 +795,7 @@ function initSettingsSheet() {
       ? "未設定: Google CloudのOAuthクライアントIDを入力してください"
       : GCal.connected ? "接続済み（予定の追加・編集・削除がGoogleカレンダーに反映されます）"
       : "未接続: 「接続して同期」をタップしてGoogleにログインしてください";
+    $("gcalConnect").textContent = GCal.connected ? "同期済み" : "接続して同期";
   };
   $("setGcalId").value = state.settings.gcalClientId || "";
   $("setGcalId").addEventListener("change", () => {
@@ -813,6 +814,7 @@ function initSettingsSheet() {
       GCal.hideReconnect();
       await GCal.syncMonth();
       $("gcalStatus").textContent = "接続しました。今月の予定を同期済みです";
+      $("gcalConnect").textContent = "同期済み";
     } else {
       $("gcalStatus").textContent = "接続できませんでした（クライアントIDと許可設定を確認してください）";
     }
