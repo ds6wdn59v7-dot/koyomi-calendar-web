@@ -786,19 +786,8 @@ function initSettingsSheet() {
     $(id).addEventListener("change", onChange));
   $("gearBtn").addEventListener("click", () => { updateGcalStatus(); $("setOverlay").classList.add("open"); });
   $("setClose").addEventListener("click", () => $("setOverlay").classList.remove("open"));
-  // 再読み込み: 暦の本日更新・予定の再描画・Google再同期（接続中なら）
-  $("reloadBtn").addEventListener("click", () => {
-    state.today = Koyomi.today();
-    state.events = Store.loadEvents();
-    renderMonth();
-    if (state.sel) renderDetail();
-    GCal.syncMonth();
-    Weather.load(true);
-    const b = $("reloadBtn");
-    const orig = b.textContent;
-    b.textContent = "↻ 更新しました";
-    setTimeout(() => { b.textContent = orig; }, 1200);
-  });
+  // 再読み込み: ページ全体をリロードしてアプリの最新版を反映
+  $("reloadBtn").addEventListener("click", () => location.reload());
 
   // Googleカレンダー連携
   const updateGcalStatus = () => {
