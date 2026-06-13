@@ -513,11 +513,16 @@ function saveEvent() {
 }
 
 // ===== Googleカレンダー連携 =====
-// クライアントIDは設定画面で入力（localStorageに保存）。トークンはブラウザ内のみ。
+// 認可コードフロー + リフレッシュトークン方式。
+// クライアントID・スコープ等は固定値。トークン交換/更新はCloudflare Workers経由（クライアントシークレットはサーバー側のみ）。
+// access_token / refresh_token はブラウザのlocalStorageに保存。
+const GCAL_WORKER = "https://koyomi-gcal-proxy.nakamochiya-mi.workers.dev";
+const GCAL_REDIRECT_URI = "https://ds6wdn59v7-dot.github.io/koyomi-calendar-web/";
+const GCAL_SCOPE = "https://www.googleapis.com/auth/calendar.events";
+
 const GCal = {
   COLOR: "#4285f4",
   cache: new Map(),          // "y-m" -> [{d, min, end, title}]
-  tokenClient: null,
 
   get clientId() { return (state.settings.gcalClientId || "").trim(); },
   get token() {
@@ -527,8 +532,8 @@ const GCal = {
     if (t) localStorage.setItem("gcalToken", JSON.stringify(t));
     else localStorage.removeItem("gcalToken");
   },
-  get connected() { return !!this.token; },
-  get tokenValid() { const t = this.token; return t && t.expires_at > Date.now() + 60000; },
+  get connected() { return !!this.token?.refresh_token; },
+  get tokenValid() { const t = this.token; return t && t.access_token && t.expires_at > Date.now() + 60000; },
   // 一度接続したかどうか（トークン失効後も「再接続が必要」を出すために保持）
   get enabled() { return localStorage.getItem("gcalEnabled") === "1"; },
   set enabled(v) {
@@ -539,36 +544,66 @@ const GCal = {
   showReconnect() { const b = document.getElementById("gcalBanner"); if (b) b.hidden = false; },
   hideReconnect() { const b = document.getElementById("gcalBanner"); if (b) b.hidden = true; },
 
-  /// アクセストークンを取得（interactive=trueでポップアップ許可）
-  ensureToken(interactive) {
-    return new Promise((resolve) => {
-      if (this.tokenValid) return resolve(this.token.access_token);
-      if (!this.clientId || !window.google?.accounts?.oauth2) return resolve(null);
-      this.tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: this.clientId,
-        scope: "https://www.googleapis.com/auth/calendar.events",
-        callback: (resp) => {
-          if (resp.access_token) {
-            this.token = { access_token: resp.access_token, expires_at: Date.now() + (resp.expires_in - 60) * 1000 };
-            resolve(resp.access_token);
-          } else resolve(null);
-        },
-        error_callback: () => resolve(null),
-      });
-      this.tokenClient.requestAccessToken({ prompt: interactive ? "consent" : "" });
+  /// Googleの認可画面へフルページ遷移（同意のたびにrefresh_tokenを再発行）
+  authorize() {
+    const params = new URLSearchParams({
+      client_id: this.clientId,
+      redirect_uri: GCAL_REDIRECT_URI,
+      response_type: "code",
+      scope: GCAL_SCOPE,
+      access_type: "offline",
+      prompt: "consent",
     });
+    location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
+  },
+
+  /// 認可後のリダイレクトに付与された ?code= をWorker経由でトークンに交換
+  async handleRedirect() {
+    const code = new URLSearchParams(location.search).get("code");
+    if (!code) return false;
+    history.replaceState({}, "", location.pathname);
+    const data = await this.workerCall("/exchange", { code, redirect_uri: GCAL_REDIRECT_URI });
+    if (!data?.access_token) return false;
+    this.token = {
+      access_token: data.access_token,
+      refresh_token: data.refresh_token || this.token?.refresh_token || null,
+      expires_at: Date.now() + (data.expires_in - 60) * 1000,
+    };
+    this.enabled = true;
+    this.hideReconnect();
+    return true;
+  },
+
+  async workerCall(path, body) {
+    try {
+      const res = await fetch(GCAL_WORKER + path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      return res.ok ? res.json() : null;
+    } catch { return null; }
+  },
+
+  /// アクセストークンを取得（期限切れならrefresh_tokenでWorker経由で更新）
+  async ensureToken() {
+    if (this.tokenValid) return this.token.access_token;
+    const rt = this.token?.refresh_token;
+    if (!rt) return null;
+    const data = await this.workerCall("/refresh", { refresh_token: rt });
+    if (!data?.access_token) return null;
+    this.token = { ...this.token, access_token: data.access_token, expires_at: Date.now() + (data.expires_in - 60) * 1000 };
+    return data.access_token;
   },
 
   async api(path, opts = {}) {
-    // 失効していればサイレント再取得を試みる。失敗したら再接続バナーを表示
-    const tok = await this.ensureToken(false);
+    const tok = await this.ensureToken();
     if (!tok) { if (this.enabled) this.showReconnect(); return null; }
     const res = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary" + path, {
       ...opts,
       headers: { Authorization: "Bearer " + tok, "Content-Type": "application/json", ...(opts.headers || {}) },
     });
     if (res.status === 401) {
-      this.token = null;
       if (this.enabled) this.showReconnect();
       return null;
     }
@@ -802,21 +837,11 @@ function initSettingsSheet() {
     Store.saveSettings(state.settings);
     updateGcalStatus();
   });
-  $("gcalConnect").addEventListener("click", async () => {
+  $("gcalConnect").addEventListener("click", () => {
     state.settings.gcalClientId = $("setGcalId").value.trim();
     Store.saveSettings(state.settings);
     if (!GCal.clientId) { updateGcalStatus(); return; }
-    $("gcalStatus").textContent = "Googleにログイン中…";
-    const tok = await GCal.ensureToken(true);
-    if (tok) {
-      GCal.enabled = true;
-      GCal.hideReconnect();
-      await GCal.syncMonth();
-      $("gcalStatus").textContent = "接続しました。今月の予定を同期済みです";
-      $("gcalConnect").textContent = "同期済み";
-    } else {
-      $("gcalStatus").textContent = "接続できませんでした（クライアントIDと許可設定を確認してください）";
-    }
+    GCal.authorize();
   });
   $("gcalDisconnect").addEventListener("click", () => {
     GCal.disconnect();
@@ -905,16 +930,15 @@ function init() {
   }, 60000);
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
   Weather.load();  // 週間天気を読み込み
-  // Google連携済みなら表示月を取得（GISスクリプトの読込を少し待つ）
-  if (GCal.enabled && GCal.clientId) setTimeout(() => GCal.syncMonth(), 800);
-  // アプリを前面に戻したとき・タブに戻ったときに自動同期（サイレント再取得込み）
+  // Googleの認可画面からのリダイレクト（?code=）をトークンに交換。連携済みなら表示月を取得
+  GCal.handleRedirect().then((connected) => {
+    if (connected || (GCal.enabled && GCal.clientId)) GCal.syncMonth();
+  });
+  // アプリを前面に戻したとき・タブに戻ったときに自動同期（リフレッシュトークンでの更新込み）
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") GCal.syncMonth();
   });
-  // 再接続バナーのタップで対話的に再認証
-  $("gcalBanner").addEventListener("click", async () => {
-    const tok = await GCal.ensureToken(true);
-    if (tok) { GCal.hideReconnect(); GCal.syncMonth(); }
-  });
+  // 再接続バナーのタップで再認可
+  $("gcalBanner").addEventListener("click", () => GCal.authorize());
 }
 init();
