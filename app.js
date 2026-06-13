@@ -64,6 +64,13 @@ const eventsFor = (dt) => state.events
   .filter((e) => occursOn(e, dt))
   .sort((a, b) => (a.min ?? -1) - (b.min ?? -1));
 
+// 場所をGoogleマップで開くリンク（端末側でマップアプリ/Webが開く）
+const placeLink = (place) => {
+  if (!place) return "";
+  const url = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(place);
+  return `<a class="maplink" href="${url}" target="_blank" rel="noopener">📍 ${esc(place)}</a>　`;
+};
+
 // ===== 月SVG =====
 function moonSVG(age, size, opts = {}) {
   const r = size / 2, cx = r, cy = r;
@@ -208,7 +215,7 @@ function renderDetail() {
       <div class="bar" style="background:${c.color}"></div>
       <div class="time">${time}${endT}</div>
       <div class="et">${e.emoji ? esc(e.emoji) + " " : ""}${esc(e.title)}${repLabel ? ` <span class="rep-tag">↻${repLabel}</span>` : ""}
-        <small>${e.place ? "📍 " + esc(e.place) + "　" : ""}${c.name}</small></div>
+        <small>${placeLink(e.place)}${c.name}</small></div>
     </div>`;
   }
   // Googleカレンダーの予定（読み取り専用）
@@ -219,7 +226,7 @@ function renderDetail() {
     gRows += `<div class="evrow">
       <div class="bar" style="background:${GCal.COLOR}"></div>
       <div class="time">${time}${endT}</div>
-      <div class="et">${esc(e.title)}<small>${e.place ? "📍 " + esc(e.place) + "　" : ""}Google</small></div>
+      <div class="et">${esc(e.title)}<small>${placeLink(e.place)}Google</small></div>
     </div>`;
   }
   const gLegend = GCal.connected ? `<span><i style="background:${GCal.COLOR}"></i>Google</span>` : "";
@@ -338,7 +345,10 @@ function renderDetail() {
     el.addEventListener("click", (ev) => { ev.stopPropagation(); showSenInfo(d.senjitsu[Number(el.dataset.sen)]); });
   });
   $("dBody").querySelectorAll("[data-eid]").forEach((el) => {
-    el.addEventListener("click", () => openEventSheet(el.dataset.eid));
+    el.addEventListener("click", (ev) => {
+      if (ev.target.closest(".maplink")) return; // 地図リンクのタップは編集を開かない
+      openEventSheet(el.dataset.eid);
+    });
   });
   $("dPrev").addEventListener("click", () => moveDay(-1));
   $("dNext").addEventListener("click", () => moveDay(1));
