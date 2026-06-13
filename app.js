@@ -673,6 +673,63 @@ const GCal = {
   },
 };
 
+// ===== 週間天気（Open-Meteo・無料/キー不要） =====
+const Weather = {
+  // WMO天気コード → 絵文字
+  icon(code) {
+    if (code === 0) return "☀️";
+    if (code === 1 || code === 2) return "🌤️";
+    if (code === 3) return "☁️";
+    if (code === 45 || code === 48) return "🌫️";
+    if (code >= 51 && code <= 57) return "🌦️";
+    if (code >= 61 && code <= 67) return "🌧️";
+    if (code >= 71 && code <= 77) return "❄️";
+    if (code >= 80 && code <= 82) return "🌦️";
+    if (code === 85 || code === 86) return "🌨️";
+    if (code >= 95) return "⛈️";
+    return "🌡️";
+  },
+
+  async load(force) {
+    const r = Koyomi.region(state.settings.regionId);
+    const key = "wx_" + r.id;
+    try {
+      const c = JSON.parse(localStorage.getItem(key));
+      if (!force && c && Date.now() - c.t < 3 * 3600 * 1000) { this.render(c.data); return; }
+    } catch {}
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${r.lat}&longitude=${r.lng}`
+      + `&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=Asia%2FTokyo&forecast_days=7`;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return;
+      const j = await res.json();
+      if (!j.daily) return;
+      localStorage.setItem(key, JSON.stringify({ t: Date.now(), data: j.daily }));
+      this.render(j.daily);
+    } catch {}
+  },
+
+  render(daily) {
+    const bar = $("weatherBar");
+    if (!daily || !daily.time) { bar.hidden = true; return; }
+    const t = Koyomi.today();
+    let html = "";
+    for (let i = 0; i < daily.time.length; i++) {
+      const [y, m, d] = daily.time[i].split("-").map(Number);
+      const wdIdx = new Date(y, m - 1, d).getDay();
+      const wdCls = wdIdx === 0 ? "sun" : wdIdx === 6 ? "sat" : "";
+      const isToday = y === t.y && m === t.m && d === t.d;
+      html += `<div class="wx ${isToday ? "today" : ""}">
+        <div class="d ${wdCls}">${m}/${d}<br>${Koyomi.WD[wdIdx]}</div>
+        <div class="ic">${this.icon(daily.weather_code[i])}</div>
+        <div class="t"><span class="mx">${Math.round(daily.temperature_2m_max[i])}</span><span class="mn">${Math.round(daily.temperature_2m_min[i])}</span></div>
+      </div>`;
+    }
+    bar.innerHTML = html;
+    bar.hidden = false;
+  },
+};
+
 // ===== スワイプ =====
 // 横スワイプ（縦スクロールと区別するため、横移動が大きく縦移動が小さい時のみ発火）
 function addSwipe(el, onLeft, onRight) {
@@ -718,6 +775,7 @@ function initSettingsSheet() {
     Store.saveSettings(state.settings);
     applySettings(); renderMonth();
     if (state.sel) renderDetail();
+    Weather.load();  // 地域変更で天気も更新
   };
   ["setPalette", "setDensity", "setFont", "setFontSize", "setRegion"].forEach((id) =>
     $(id).addEventListener("change", onChange));
@@ -730,6 +788,7 @@ function initSettingsSheet() {
     renderMonth();
     if (state.sel) renderDetail();
     GCal.syncMonth();
+    Weather.load(true);
     const b = $("reloadBtn");
     const orig = b.textContent;
     b.textContent = "↻ 更新しました";
@@ -850,6 +909,7 @@ function init() {
     if (!sameDate(t, state.today)) { state.today = t; renderMonth(); }
   }, 60000);
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+  Weather.load();  // 週間天気を読み込み
   // Google連携済みなら表示月を取得（GISスクリプトの読込を少し待つ）
   if (GCal.enabled && GCal.clientId) setTimeout(() => GCal.syncMonth(), 800);
   // アプリを前面に戻したとき・タブに戻ったときに自動同期（サイレント再取得込み）
