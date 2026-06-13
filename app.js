@@ -42,6 +42,18 @@ state.dispM = state.today.m;
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+// 時刻入力（時・分のドロップダウン）: OS標準の時刻ピッカーに依存しない
+function timeSelectHTML(idPrefix, value) {
+  const [h, m] = value.split(":").map(Number);
+  const hOpts = Array.from({ length: 24 }, (_, i) =>
+    `<option value="${i}" ${i === h ? "selected" : ""}>${String(i).padStart(2, "0")}</option>`).join("");
+  const mOpts = Array.from({ length: 12 }, (_, i) => i * 5).map((mm) =>
+    `<option value="${mm}" ${mm === m ? "selected" : ""}>${String(mm).padStart(2, "0")}</option>`).join("");
+  return `<div class="time-select">
+    <select id="${idPrefix}H">${hOpts}</select><span>:</span><select id="${idPrefix}M">${mOpts}</select>
+  </div>`;
+}
+const timeSelectValue = (idPrefix) => `${$(idPrefix + "H").value.padStart(2, "0")}:${$(idPrefix + "M").value.padStart(2, "0")}`;
 const sameDate = (a, b) => a && b && a.y === b.y && a.m === b.m && a.d === b.d;
 // 繰り返し予定が指定日に発生するか（JSTにDSTがないため日数差はミリ秒で判定可）
 const DAY_MS = 86400000;
@@ -423,8 +435,8 @@ function openEventSheet(editId = null) {
     <h3>${ev ? "予定を編集" : `${dt.m}月${dt.d}日の予定`}</h3>
     <div class="frow"><label>タイトル</label><input type="text" id="evTitle" value="${esc(v.title)}" placeholder="予定名"></div>
     <div class="frow"><label>終日</label><input type="checkbox" id="evAllDay" ${v.allDay ? "checked" : ""}></div>
-    <div class="frow" id="timeRow1"><label>開始</label><input type="time" id="evStart" value="${v.start}"></div>
-    <div class="frow" id="timeRow2"><label>終了</label><input type="time" id="evEnd" value="${v.end}"></div>
+    <div class="frow" id="timeRow1"><label>開始</label>${timeSelectHTML("evStart", v.start)}</div>
+    <div class="frow" id="timeRow2"><label>終了</label>${timeSelectHTML("evEnd", v.end)}</div>
     <div class="frow"><label>場所</label><input type="text" id="evPlace" value="${esc(v.place)}" placeholder="例: 渋谷"></div>
     <div class="frow"><label>繰り返し</label><select id="evRepeat">${repOpts}</select></div>
     <div class="frow" id="repUntilRow"><label>繰り返しの終了</label><input type="date" id="evRepeatUntil" value="${v.repeatUntil}"></div>
@@ -477,8 +489,8 @@ function saveEvent() {
   const toMin = (t) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
   let min = null, end = null;
   if (!allDay) {
-    min = toMin($("evStart").value || "09:00");
-    end = toMin($("evEnd").value || "10:00");
+    min = toMin(timeSelectValue("evStart"));
+    end = toMin(timeSelectValue("evEnd"));
     if (end <= min) end = min + 60;
   }
   const emoji = [...$("evEmoji").value.trim()].slice(0, 2).join("") || null; // サロゲート対応で先頭1絵文字
