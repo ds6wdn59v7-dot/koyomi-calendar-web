@@ -134,7 +134,10 @@ function renderMonth() {
 
     let badge = "";
     if (d.sekki) badge = `<span class="sekki">${d.sekki.name}</span>`;
-    else if (d.event) badge = `<span class="evdot"></span>`;
+    else if (d.event) {
+      const label = d.event.length > 3 ? d.event.slice(0, 2) + "…" : d.event;
+      badge = `<span class="sekki">${label}</span>`;
+    } else if (marks) badge = `<span class="evdot"></span>`;
 
     // 旧暦15日=望（金色の満月）、旧暦1日=朔（新月）を強調
     const isFull = d.lunar.d === 15;
@@ -350,8 +353,8 @@ function renderDetail() {
   });
   $("dBody").querySelectorAll("[data-eid]").forEach((el) => {
     el.addEventListener("click", (ev) => {
-      if (ev.target.closest(".maplink")) return; // 地図リンクのタップは編集を開かない
-      openEventSheet(el.dataset.eid);
+      if (ev.target.closest(".maplink")) return; // 地図リンクのタップは詳細を開かない
+      openEventDetail(el.dataset.eid);
     });
   });
   $("dPrev").addEventListener("click", () => moveDay(-1));
@@ -396,6 +399,31 @@ function showInfo(kind, d) {
 function showSenInfo(s) {
   showModal("選日・暦注下段", s.name, s.type === "吉" ? "吉日" : "凶日", s.note, Koyomi.CAT.senjitsu.desc);
 }
+
+// ===== 予定詳細 =====
+function openEventDetail(eid) {
+  const ev = state.events.find((e) => e.id === eid);
+  if (!ev) return;
+  const time = ev.min == null ? "終日" : `${Koyomi.fmtTime(ev.min)}${ev.end != null ? " 〜 " + Koyomi.fmtTime(ev.end) : ""}`;
+  const repLabel = { daily: "毎日", weekly: "毎週", monthly: "毎月", yearly: "毎年" }[ev.repeat];
+
+  $("evDetailSheet").innerHTML = `
+    <div class="evdet-head">
+      ${ev.emoji ? `<span class="emoji">${esc(ev.emoji)}</span>` : ""}
+      <h3>${esc(ev.title)}</h3>
+    </div>
+    <div class="evdet-row"><span class="ic">🕐</span>${esc(time)}${repLabel ? ` <span class="rep-tag">↻${repLabel}</span>` : ""}</div>
+    ${ev.place ? `<div class="evdet-row"><span class="ic">📍</span>${placeLink(ev.place) || esc(ev.place)}</div>` : ""}
+    <div class="sheet-actions">
+      <button class="btn-cancel" id="evDetailClose">閉じる</button>
+      <button class="btn-save" id="evDetailEdit">編集</button>
+    </div>`;
+
+  $("evDetailClose").addEventListener("click", closeEventDetail);
+  $("evDetailEdit").addEventListener("click", () => { closeEventDetail(); openEventSheet(eid); });
+  $("evDetailOverlay").classList.add("open");
+}
+function closeEventDetail() { $("evDetailOverlay").classList.remove("open"); }
 
 // ===== 予定シート =====
 function openEventSheet(editId = null) {

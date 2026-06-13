@@ -248,6 +248,14 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 .btn-save:disabled { opacity:.4; }
 .btn-delete { width:100%; margin-top:10px; padding:11px; border-radius:12px; font-size:13px;
   font-weight:700; color:var(--red); border:1px solid var(--red); }
+
+.evdet-head { display:flex; align-items:flex-start; gap:10px; margin-bottom:14px; }
+.evdet-head .emoji { font-size:24px; line-height:1.3; }
+.evdet-head h3 { flex:1; font-size:17px; font-weight:800; text-align:left; margin:0; }
+.evdet-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line2);
+  font-size:13.5px; }
+.evdet-row .ic { flex:none; width:20px; text-align:center; font-size:15px; }
+.evdet-row .rep-tag { font-size:11px; font-weight:700; color:var(--sat); margin-left:2px; }
 </style>
 </head>
 <body data-palette="paper" data-density="standard" data-font="gothic">
@@ -282,6 +290,11 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
     <button class="dset-btn" id="dGearBtn" aria-label="設定">&#9776;</button>
   </div>
   <div class="dbody" id="dBody"></div>
+</div>
+
+<!-- 予定詳細 -->
+<div class="overlay" id="evDetailOverlay">
+  <div class="sheet" id="evDetailSheet"></div>
 </div>
 
 <!-- 予定シート -->
@@ -344,7 +357,7 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
   <div class="modal" id="installModal"></div>
 </div>
 
-<script src="koyomi.js?v=29"></script>
-<script src="app.js?v=29"></script>
+<script src="koyomi.js?v=31"></script>
+<script src="app.js?v=31"></script>
 </body>
 </html>
