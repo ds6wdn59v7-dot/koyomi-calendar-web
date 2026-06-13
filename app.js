@@ -12,11 +12,7 @@ const Store = {
   saveEvents(evs) { localStorage.setItem("userEvents", JSON.stringify(evs)); },
 };
 
-const CAL_SOURCES = {
-  privat: { name: "個人", color: "#c4633a" },
-  work: { name: "仕事", color: "#3b6fd4" },
-  family: { name: "家族", color: "#1f8a5b" },
-};
+const EVENT_COLOR = "var(--sat)";
 const PRESET_EMOJIS = ["🍽️", "🤝", "🎂", "🍻", "🏥", "💼", "🧘", "✈️", "⚽️", "🎌", "📚", "🎵", "🐟", "⛩️"];
 // 文字アイコン（休み・出勤など）。絵文字と同様にアイコン欄で使える
 const PRESET_CHARS = ["休", "出", "有", "祝", "締", "稽"];
@@ -131,10 +127,9 @@ function renderMonth() {
 
     const gMarks = GCal.eventsFor(d.date).map(() => `<i style="background:${GCal.COLOR}"></i>`);
     const marks = eventsFor(d.date).map((e) => {
-      const color = (CAL_SOURCES[e.cal] || {}).color || "var(--sub)";
-      if (!e.emoji) return `<i style="background:${color}"></i>`;
+      if (!e.emoji) return `<i style="background:${EVENT_COLOR}"></i>`;
       if (isPictographic(e.emoji)) return `<span>${esc(e.emoji)}</span>`;
-      return `<b class="tmark" style="background:${color}">${esc(e.emoji)}</b>`;
+      return `<b class="tmark" style="background:${EVENT_COLOR}">${esc(e.emoji)}</b>`;
     }).concat(gMarks).slice(0, 3).join("");
 
     let badge = "";
@@ -216,19 +211,16 @@ function renderDetail() {
   const wdCls = d.isSunday || d.holiday ? "sun" : d.isSaturday ? "sat" : "";
 
   // 予定カード
-  const legend = Object.entries(CAL_SOURCES).map(([, s]) =>
-    `<span><i style="background:${s.color}"></i>${s.name}</span>`).join("");
   let evRows = "";
   for (const e of userEvs) {
-    const c = CAL_SOURCES[e.cal] || { color: "var(--sub)", name: "" };
     const time = e.min == null ? "終日" : Koyomi.fmtTime(e.min);
     const endT = e.min != null && e.end != null ? `<small>${Koyomi.fmtTime(e.end)}</small>` : "";
     const repLabel = { daily: "毎日", weekly: "毎週", monthly: "毎月", yearly: "毎年" }[e.repeat];
     evRows += `<div class="evrow" data-eid="${esc(e.id)}">
-      <div class="bar" style="background:${c.color}"></div>
+      <div class="bar" style="background:${EVENT_COLOR}"></div>
       <div class="time">${time}${endT}</div>
       <div class="et">${e.emoji ? esc(e.emoji) + " " : ""}${esc(e.title)}${repLabel ? ` <span class="rep-tag">↻${repLabel}</span>` : ""}
-        <small>${placeLink(e.place)}${c.name}</small></div>
+        ${placeLink(e.place) ? `<small>${placeLink(e.place)}</small>` : ""}</div>
     </div>`;
   }
   // Googleカレンダーの予定（読み取り専用）
@@ -242,9 +234,8 @@ function renderDetail() {
       <div class="et">${esc(e.title)}<small>${placeLink(e.place)}Google</small></div>
     </div>`;
   }
-  const gLegend = GCal.connected ? `<span><i style="background:${GCal.COLOR}"></i>Google</span>` : "";
   const schedule = `<div class="card">
-    <div class="chead"><span class="ctitle serif">予定</span><span class="legend">${legend}${gLegend}</span></div>
+    <div class="chead"><span class="ctitle serif">予定</span></div>
     ${evRows + gRows || `<div class="noev">この日の予定はありません（右上の＋で追加）</div>`}
   </div>`;
 
@@ -416,7 +407,6 @@ function openEventSheet(editId = null) {
     allDay: ev ? ev.min == null : false,
     start: ev && ev.min != null ? Koyomi.fmtTime(ev.min) : "09:00",
     end: ev && ev.end != null ? Koyomi.fmtTime(ev.end) : "10:00",
-    cal: ev ? ev.cal : "privat",
     emoji: ev ? ev.emoji || "" : "",
     place: ev ? ev.place || "" : "",
     repeat: ev ? ev.repeat || "none" : "none",
@@ -424,8 +414,6 @@ function openEventSheet(editId = null) {
   };
   const repOpts = [["none", "なし"], ["daily", "毎日"], ["weekly", "毎週"], ["monthly", "毎月"], ["yearly", "毎年"]]
     .map(([k, l]) => `<option value="${k}" ${v.repeat === k ? "selected" : ""}>${l}</option>`).join("");
-  const calOpts = Object.entries(CAL_SOURCES).map(([k, s]) =>
-    `<option value="${k}" ${v.cal === k ? "selected" : ""}>${s.name}</option>`).join("");
   const emojiBtns = PRESET_EMOJIS.map((e) =>
     `<button type="button" data-emoji="${e}" class="${v.emoji === e ? "sel" : ""}">${e}</button>`).join("")
     + PRESET_CHARS.map((c) =>
@@ -440,7 +428,6 @@ function openEventSheet(editId = null) {
     <div class="frow"><label>場所</label><input type="text" id="evPlace" value="${esc(v.place)}" placeholder="例: 渋谷"></div>
     <div class="frow"><label>繰り返し</label><select id="evRepeat">${repOpts}</select></div>
     <div class="frow" id="repUntilRow"><label>繰り返しの終了</label><input type="date" id="evRepeatUntil" value="${v.repeatUntil}"></div>
-    <div class="frow"><label>カレンダー</label><select id="evCal">${calOpts}</select></div>
     <div class="frow" style="border:none"><label>アイコン</label><input type="text" id="evEmoji" value="${esc(v.emoji)}" placeholder="絵文字" style="max-width:80px;text-align:center"></div>
     <div class="emoji-row" id="emojiRow">${emojiBtns}</div>
     <div class="sheet-actions">
@@ -502,7 +489,7 @@ function saveEvent() {
   const ev = {
     id: state.editingId || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())),
     y: base.y, m: base.m, d: base.d, min, end, title,
-    cal: $("evCal").value, emoji,
+    emoji,
     place: $("evPlace").value.trim() || null,
     repeat, repeatUntil,
     gcalId: editing ? editing.gcalId || null : null,
