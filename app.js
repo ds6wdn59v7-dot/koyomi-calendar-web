@@ -904,6 +904,17 @@ function initSettingsSheet() {
   // 再読み込み: ページ全体をリロードしてアプリの最新版を反映
   $("reloadBtn").addEventListener("click", () => location.reload());
 
+  // 共有: Web Share APIがあれば共有シート、なければURLをコピー
+  $("shareBtn").addEventListener("click", async () => {
+    const data = { title: "和暦カレンダー", text: "和暦カレンダー", url: location.origin + location.pathname };
+    if (navigator.share) {
+      try { await navigator.share(data); } catch { /* キャンセル時は何もしない */ }
+    } else if (navigator.clipboard) {
+      await navigator.clipboard.writeText(data.url);
+      alert("URLをコピーしました");
+    }
+  });
+
   // Googleカレンダー連携
   const updateGcalStatus = () => {
     $("gcalStatus").textContent = !GCal.clientId
