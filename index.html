@@ -151,7 +151,9 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
   padding:8px 12px; margin-top:9px; }
 .card .chead { display:flex; align-items:center; justify-content:space-between; }
 .card .ctitle { font-size:14px; font-weight:700; letter-spacing:2px; }
-.card .add-ev { font-size:18px; line-height:1; color:var(--red); flex:none; padding:2px 4px; }
+.card .add-ev { width:30px; height:30px; border-radius:50%; background:var(--chip-bg);
+  font-size:17px; line-height:1; color:var(--red); flex:none; padding:0;
+  display:flex; align-items:center; justify-content:center; }
 .noev { font-size:12px; color:var(--faint); padding:6px 0; }
 .evrow { display:flex; gap:10px; align-items:flex-start; margin-top:6px; }
 .evrow .bar { width:3px; align-self:stretch; border-radius:3px; }
@@ -173,16 +175,16 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
   background:var(--gold); color:var(--paper); margin-right:8px; }
 
 .kgrid { display:flex; gap:6px; margin-top:7px; }
-.kcell { flex:1; text-align:center; background:var(--grid-bg); border:1px solid var(--line2);
-  border-radius:11px; padding:8px 2px 9px; }
+.kcell { flex:1 1 0; min-width:0; text-align:center; background:var(--grid-bg); border:1px solid var(--line2);
+  border-radius:11px; padding:8px 2px 9px; overflow:hidden; }
 .kcell .l { font-size:9px; font-weight:700; letter-spacing:1.5px; color:var(--sub); }
-.kcell .v { font-size:19px; font-weight:900; margin:2px 0; white-space:nowrap; }
+.kcell .v { font-size:19px; font-weight:900; margin:2px 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .kcell .v.taian { color:var(--red); }
 .kcell .s { font-size:8px; color:var(--sub); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
-.senrow { display:flex; align-items:center; gap:6px; margin-top:7px; }
-.senrow .lbl { font-size:10px; font-weight:700; letter-spacing:2px; color:var(--sub); flex:none; }
-.chips { display:flex; gap:6px; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+.senrow { display:flex; align-items:flex-start; gap:6px; margin-top:7px; }
+.senrow .lbl { font-size:10px; font-weight:700; letter-spacing:2px; color:var(--sub); flex:none; padding-top:4px; }
+.chips { display:flex; flex-wrap:wrap; gap:6px; }
 .chip { flex:none; display:flex; align-items:center; gap:4px; font-size:11.5px; font-weight:700;
   padding:4px 11px; border-radius:20px; border:1px solid var(--line); color:var(--sub); }
 .chip i { width:5px; height:5px; border-radius:50%; background:var(--sat); display:block; }
@@ -384,7 +386,7 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
   <div class="modal" id="installModal"></div>
 </div>
 
-<script src="koyomi.js?v=35"></script>
-<script src="app.js?v=35"></script>
+<script src="koyomi.js?v=36"></script>
+<script src="app.js?v=36"></script>
 </body>
 </html>
