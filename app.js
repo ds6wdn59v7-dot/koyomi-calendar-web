@@ -41,6 +41,7 @@ const state = {
   })(),
   events: Store.loadEvents(),
   editingId: null,
+  editingGcalSeed: null,
 };
 state.dispY = state.today.y;
 state.dispM = state.today.m;
@@ -242,7 +243,7 @@ function renderDetail() {
   for (const e of GCal.eventsFor(dt)) {
     const time = e.min == null ? "終日" : Koyomi.fmtTime(e.min);
     const endT = e.min != null && e.end != null ? `<small>${Koyomi.fmtTime(e.end)}</small>` : "";
-    gRows += `<div class="evrow">
+    gRows += `<div class="evrow" data-geid="${esc(e.gcalId)}">
       <div class="bar" style="background:${GCal.COLOR}"></div>
       <div class="time">${time}${endT}</div>
       <div class="et">${esc(e.title)}<small>${placeLink(e.place)}Google</small></div>
@@ -365,6 +366,13 @@ function renderDetail() {
       openEventDetail(el.dataset.eid);
     });
   });
+  $("dBody").querySelectorAll("[data-geid]").forEach((el) => {
+    el.addEventListener("click", (ev) => {
+      if (ev.target.closest(".maplink")) return;
+      const seed = GCal.eventsFor(dt).find((e) => e.gcalId === el.dataset.geid);
+      if (seed) openEventSheet(null, seed);
+    });
+  });
   $("dPrev").addEventListener("click", () => moveDay(-1));
   $("dNext").addEventListener("click", () => moveDay(1));
   $("addEvInline").addEventListener("click", () => openEventSheet(null));
@@ -435,17 +443,19 @@ function openEventDetail(eid) {
 function closeEventDetail() { $("evDetailOverlay").classList.remove("open"); }
 
 // ===== 予定シート =====
-function openEventSheet(editId = null) {
+function openEventSheet(editId = null, gcalSeed = null) {
   state.editingId = editId;
+  state.editingGcalSeed = editId ? null : gcalSeed;
   const dt = state.sel;
   const ev = editId ? state.events.find((e) => e.id === editId) : null;
+  const src = ev || gcalSeed;
   const v = {
-    title: ev ? ev.title : "",
-    allDay: ev ? ev.min == null : false,
-    start: ev && ev.min != null ? Koyomi.fmtTime(ev.min) : "09:00",
-    end: ev && ev.end != null ? Koyomi.fmtTime(ev.end) : "10:00",
+    title: src ? src.title : "",
+    allDay: src ? src.min == null : false,
+    start: src && src.min != null ? Koyomi.fmtTime(src.min) : "09:00",
+    end: src && src.end != null ? Koyomi.fmtTime(src.end) : "10:00",
     emoji: ev ? ev.emoji || "" : "",
-    place: ev ? ev.place || "" : "",
+    place: src ? src.place || "" : "",
     repeat: ev ? ev.repeat || "none" : "none",
     repeatUntil: ev ? ev.repeatUntil || "" : "",
   };
@@ -457,7 +467,8 @@ function openEventSheet(editId = null) {
     `<button type="button" data-emoji="${c}" class="tpre ${v.emoji === c ? "sel" : ""}">${c}</button>`).join("");
 
   $("evSheet").innerHTML = `
-    <h3>${ev ? "予定を編集" : `${dt.m}月${dt.d}日の予定`}</h3>
+    <h3>${src ? "予定を編集" : `${dt.m}月${dt.d}日の予定`}</h3>
+    ${gcalSeed ? `<p class="evsheet-note">Googleカレンダーの予定です。保存するとこのアプリでも管理され、Googleカレンダーにも反映されます。</p>` : ""}
     <div class="frow"><label>タイトル</label><input type="text" id="evTitle" value="${esc(v.title)}" placeholder="予定名"></div>
     <div class="frow"><label>終日</label><input type="checkbox" id="evAllDay" ${v.allDay ? "checked" : ""}></div>
     <div class="frow" id="timeRow1"><label>開始</label>${timeSelectHTML("evStart", v.start)}</div>
@@ -469,9 +480,9 @@ function openEventSheet(editId = null) {
     <div class="emoji-row" id="emojiRow">${emojiBtns}</div>
     <div class="sheet-actions">
       <button class="btn-cancel" id="evCancel">キャンセル</button>
-      <button class="btn-save" id="evSave">${ev ? "保存" : "追加"}</button>
+      <button class="btn-save" id="evSave">${src ? "保存" : "追加"}</button>
     </div>
-    ${ev ? `<button class="btn-delete" id="evDelete">予定を削除</button>` : ""}`;
+    ${src ? `<button class="btn-delete" id="evDelete">予定を削除</button>` : ""}`;
 
   const syncTimeRows = () => {
     const hide = $("evAllDay").checked;
@@ -493,17 +504,27 @@ function openEventSheet(editId = null) {
   });
   $("evCancel").addEventListener("click", closeEventSheet);
   $("evSave").addEventListener("click", saveEvent);
-  if (ev) $("evDelete").addEventListener("click", () => {
-    const target = state.events.find((e) => e.id === editId);
-    if (target && GCal.connected) GCal.remove(target);
-    state.events = state.events.filter((e) => e.id !== editId);
-    Store.saveEvents(state.events);
+  if (src) $("evDelete").addEventListener("click", () => {
+    if (ev) {
+      if (GCal.connected) GCal.remove(ev);
+      state.events = state.events.filter((e) => e.id !== editId);
+      Store.saveEvents(state.events);
+    } else if (gcalSeed) {
+      if (GCal.connected) GCal.remove(gcalSeed);
+      removeGcalCacheEntry(dt, gcalSeed.gcalId);
+    }
     closeEventSheet(); renderDetail(); renderMonth();
   });
   $("evOverlay").classList.add("open");
 }
 
-function closeEventSheet() { $("evOverlay").classList.remove("open"); state.editingId = null; }
+function closeEventSheet() { $("evOverlay").classList.remove("open"); state.editingId = null; state.editingGcalSeed = null; }
+
+function removeGcalCacheEntry(dt, gcalId) {
+  const key = `${dt.y}-${dt.m}`;
+  const arr = GCal.cache.get(key);
+  if (arr) GCal.cache.set(key, arr.filter((e) => e.gcalId !== gcalId));
+}
 
 function saveEvent() {
   const dt = state.sel;
@@ -519,6 +540,7 @@ function saveEvent() {
   }
   const emoji = [...$("evEmoji").value.trim()].slice(0, 2).join("") || null; // サロゲート対応で先頭1絵文字
   const editing = state.editingId ? state.events.find((e) => e.id === state.editingId) : null;
+  const seed = state.editingGcalSeed;
   const repeat = $("evRepeat").value;
   const repeatUntil = repeat !== "none" ? ($("evRepeatUntil").value || null) : null;
   // 編集時は元の開始日を維持（繰り返しインスタンスから開いても基準日がずれないように）
@@ -529,14 +551,16 @@ function saveEvent() {
     emoji,
     place: $("evPlace").value.trim() || null,
     repeat, repeatUntil,
-    gcalId: editing ? editing.gcalId || null : null,
+    gcalId: editing ? editing.gcalId || null : (seed ? seed.gcalId : null),
   };
   if (state.editingId) {
     state.events = state.events.map((e) => (e.id === state.editingId ? ev : e));
   } else {
     state.events.push(ev);
+    if (seed) removeGcalCacheEntry(dt, seed.gcalId);
   }
   Store.saveEvents(state.events);
+  state.editingGcalSeed = null;
   closeEventSheet(); renderDetail(); renderMonth();
   // Googleカレンダーへ反映（非同期・失敗してもローカルは保持）
   if (GCal.connected) {
@@ -675,7 +699,7 @@ const GCal = {
         d = s.getDate();
         if (s.getMonth() + 1 !== m) continue;
       } else continue;
-      evs.push({ d, min, end, title: it.summary || "(無題)", place: it.location || null });
+      evs.push({ y, m, d, min, end, title: it.summary || "(無題)", place: it.location || null, gcalId: it.id });
     }
     this.cache.set(key, evs);
     return evs;
