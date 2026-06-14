@@ -238,13 +238,14 @@ const Koyomi = (() => {
 
   const YEAR_EVENTS = {
     "1-1": "元日", "1-2": "初夢", "1-7": "七草", "1-11": "鏡開き", "1-15": "小正月", "1-20": "二十日正月",
-    "2-14": "バレンタインデー",
+    "2-8": "針供養", "2-14": "バレンタインデー",
     "3-3": "ひな祭り", "3-14": "ホワイトデー", "3-21": "弘法大師の日",
     "4-1": "エイプリルフール", "4-8": "花まつり",
     "5-1": "メーデー", "5-5": "端午の節句",
-    "6-1": "衣替え", "6-4": "歯と口の健康週間", "6-5": "環境の日", "6-10": "時の記念日", "6-16": "和菓子の日", "6-30": "夏越の祓",
+    "6-1": "衣替え", "6-4": "歯と口の健康週間", "6-5": "環境の日", "6-10": "時の記念日", "6-16": "和菓子の日",
+    "6-23": "慰霊の日", "6-30": "夏越の祓",
     "7-1": "山開き・海開き", "7-7": "七夕",
-    "8-6": "広島原爆の日", "8-13": "盆迎え火", "8-15": "終戦記念日", "8-16": "送り火",
+    "8-6": "広島原爆の日", "8-9": "長崎原爆の日", "8-13": "盆迎え火", "8-15": "終戦記念日", "8-16": "送り火",
     "9-1": "防災の日", "9-9": "重陽の節句",
     "10-1": "衣替え", "10-31": "ハロウィン",
     "11-15": "七五三",
@@ -458,6 +459,42 @@ const Koyomi = (() => {
     for (let dn = doyoStart; dn < risshuu; dn++) if (etoIndexJdn(dn) % 12 === 1) ushi.push(dn);
     if (ushi[0]) put(dateFromJdn(ushi[0], y), "土用の丑の日");
     if (ushi[1]) put(dateFromJdn(ushi[1], y), "二の丑");
+    // 初午（立春後最初の午の日）
+    {
+      const risshunJdn = Astro.jdn(y, risshun.m, risshun.d);
+      let dn = risshunJdn;
+      do { dn++; } while (etoIndexJdn(dn) % 12 !== 6);
+      put(dateFromJdn(dn, y), "初午");
+    }
+    // 八十八夜（立春から数えて88日目）
+    put(addDays(risshun, 87), "八十八夜");
+    // 春社・秋社（春分・秋分に最も近い戊の日）
+    const nearestEtoDay = (centerDt, target) => {
+      const center = Astro.jdn(y, centerDt.m, centerDt.d);
+      for (let off = 0; off <= 5; off++) {
+        if (etoIndexJdn(center + off) % 10 === target) return center + off;
+        if (etoIndexJdn(center - off) % 10 === target) return center - off;
+      }
+      return center;
+    };
+    const shunbun = termDate(0, 3, 20);
+    const shuubun = termDate(180, 9, 23);
+    put(dateFromJdn(nearestEtoDay(shunbun, 4), y), "春社");
+    put(dateFromJdn(nearestEtoDay(shuubun, 4), y), "秋社");
+    // 半夏生（夏至から数えて11日目）
+    put(addDays(termDate(90, 6, 21), 10), "半夏生");
+    // 三伏（夏至後の庚の日：3番目=初伏、4番目=中伏／立秋後最初の庚の日=末伏）
+    {
+      const geshiJdn = Astro.jdn(y, termDate(90, 6, 21).m, termDate(90, 6, 21).d);
+      const kous = [];
+      let dn = geshiJdn;
+      while (kous.length < 4) { dn++; if (etoIndexJdn(dn) % 10 === 6) kous.push(dn); }
+      put(dateFromJdn(kous[2], y), "初伏");
+      put(dateFromJdn(kous[3], y), "中伏");
+      let dn2 = risshuu;
+      do { dn2++; } while (etoIndexJdn(dn2) % 10 !== 6);
+      put(dateFromJdn(dn2, y), "末伏");
+    }
     // 中秋の名月（旧暦8/15）
     let mn = Astro.jdn(y, 9, 1);
     for (let i = 0; i < 60; i++) {
