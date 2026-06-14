@@ -25,11 +25,20 @@ const state = {
   today: Koyomi.today(),
   dispY: 0, dispM: 0,
   sel: null,                 // 詳細表示中の日付 {y,m,d}
-  settings: Object.assign({
-    palette: "paper", density: "standard", font: "gothic", fontSize: "standard", regionId: "tokyo",
-    // WebアプリのOAuthクライアントIDは公開して問題ない識別子（秘密情報ではない）
-    gcalClientId: "60450009298-ap985moaa7nq31kpc2o4j8c0mnjd6emf.apps.googleusercontent.com",
-  }, Store.loadSettings()),
+  settings: (() => {
+    const DEFAULT_DISPLAY = {
+      rokuyo: true, lunar: true, sekki: true, moon: true,
+      eto: true, kyusei: true, choku: true, shuku: true,
+      senjitsu: true, tide: true,
+    };
+    const loaded = Store.loadSettings();
+    return Object.assign({
+      palette: "paper", density: "standard", font: "gothic", fontSize: "standard", regionId: "tokyo",
+      // WebアプリのOAuthクライアントIDは公開して問題ない識別子（秘密情報ではない）
+      gcalClientId: "60450009298-ap985moaa7nq31kpc2o4j8c0mnjd6emf.apps.googleusercontent.com",
+      display: DEFAULT_DISPLAY,
+    }, loaded, { display: Object.assign({}, DEFAULT_DISPLAY, loaded.display) });
+  })(),
   events: Store.loadEvents(),
   editingId: null,
 };
@@ -151,7 +160,7 @@ function renderMonth() {
 
     cells.push(`<div class="${cls.join(" ")}" data-d="${d.day}">
       ${Weather.cellHTML(d.date)}
-      ${density === "simple" ? "" : `<div class="roku ${rokuCls}">${d.rokuyo}</div>`}
+      ${density === "simple" || !state.settings.display.rokuyo ? "" : `<div class="roku ${rokuCls}">${d.rokuyo}</div>`}
       <div class="num">${d.day}</div>
       ${mid}
       <div class="marks">${marks}</div>
@@ -243,21 +252,22 @@ function renderDetail() {
   </div>`;
 
   // 情報行
-  const lunarRow = `<div class="irow" data-info="lunar">
+  const disp = state.settings.display;
+  const lunarRow = !disp.lunar ? "" : `<div class="irow" data-info="lunar">
     <div class="lbl serif">旧暦</div>
     <div><div class="main">${d.lunar.leap ? "閏" : ""}${d.lunar.m}月${d.lunar.d}日
       <small>${Koyomi.WAFU[d.lunar.m]}・${Koyomi.kanjiNum(d.lunar.d)}日</small></div>
       ${density !== "simple" ? `<div class="note">${d.lunar.d === 1 ? "朔（新月）" : d.lunar.d === 15 ? "望（満月）" : "月の満ち欠けで数える暦"}</div>` : ""}
     </div></div>`;
 
-  const sekkiRow = `<div class="irow" data-info="sekki">
+  const sekkiRow = !disp.sekki ? "" : `<div class="irow" data-info="sekki">
     <div class="lbl serif">節気</div>
     <div><div class="main">${d.sekki ? `<span class="sekki-badge">${d.sekki.name}</span>` : ""}${d.kou.name}
       <small>${d.kou.yomi}</small></div>
       ${density !== "simple" ? `<div class="note">${d.kou.group}　${d.sekki ? d.sekki.note : d.kou.note}</div>` : ""}
     </div></div>`;
 
-  const moonRow = `<div class="irow" data-info="moon">
+  const moonRow = !disp.moon ? "" : `<div class="irow" data-info="moon">
     <div class="lbl serif">月相</div>
     <div style="flex:1"><div class="main">${d.moonPhase.name}
       <small>${d.moonPhase.yomi || d.moonPhase.alt}</small></div>
@@ -272,7 +282,8 @@ function renderDetail() {
     ["九星", d.kyusei.s, d.kyusei.n, false, "kyusei"],
     ["中段", d.choku, "十二直・" + d.chokuYomi, false, "choku"],
     ["宿", d.shuku + "宿", "二十八宿・" + d.shukuYomi, false, "shuku"],
-  ].map(([l, v, s, taian, kind]) =>
+  ].filter(([, , , , kind]) => disp[kind])
+   .map(([l, v, s, taian, kind]) =>
     `<div class="kcell" data-info="${kind}"><div class="l serif">${l}</div>
      <div class="v serif ${taian ? "taian" : ""}">${v}</div><div class="s">${s}</div></div>`).join("");
 
@@ -329,9 +340,9 @@ function renderDetail() {
     </div>
     ${schedule}
     ${lunarRow}${sekkiRow}${moonRow}
-    <div class="kgrid">${kcells}</div>
-    <div class="senrow"><span class="lbl serif">選日・下段</span><div class="chips">${chips}</div></div>
-    <div class="card">
+    ${kcells ? `<div class="kgrid">${kcells}</div>` : ""}
+    ${disp.senjitsu ? `<div class="senrow"><span class="lbl serif">選日・下段</span><div class="chips">${chips}</div></div>` : ""}
+    ${disp.tide ? `<div class="card">
       <div class="tide-head">
         <span class="t serif">〜 潮汐<small>${reg.name}・${reg.bay}</small></span>
         <span class="tide-pill ${tides.name === "大潮" ? "oo" : ""}">${tides.name}</span>
@@ -342,7 +353,7 @@ function renderDetail() {
         <span>干満差 <b>${tides.range}cm</b></span>
       </div>
     </div>
-    <div class="disclaimer">※ 潮汐・日の出入りは簡易計算による目安です。航海・釣行などの判断には気象庁・海上保安庁の公式情報をご利用ください。</div>`;
+    <div class="disclaimer">※ 潮汐・日の出入りは簡易計算による目安です。航海・釣行などの判断には気象庁・海上保安庁の公式情報をご利用ください。</div>` : ""}`;
 
   // タップハンドラ
   $("dBody").querySelectorAll("[data-info]").forEach((el) => {
@@ -848,6 +859,26 @@ function initSettingsSheet() {
     $(id).addEventListener("change", onChange));
   $("gearBtn").addEventListener("click", () => { updateGcalStatus(); $("setOverlay").classList.add("open"); });
   $("setClose").addEventListener("click", () => $("setOverlay").classList.remove("open"));
+
+  // 表示設定
+  const DISPLAY_FIELDS = {
+    dispRokuyo: "rokuyo", dispLunar: "lunar", dispSekki: "sekki", dispMoon: "moon",
+    dispEto: "eto", dispKyusei: "kyusei", dispChoku: "choku", dispShuku: "shuku",
+    dispSenjitsu: "senjitsu", dispTide: "tide",
+  };
+  $("openDisplaySettings").addEventListener("click", () => {
+    for (const [id, key] of Object.entries(DISPLAY_FIELDS)) $(id).checked = state.settings.display[key];
+    $("displayOverlay").classList.add("open");
+  });
+  for (const [id, key] of Object.entries(DISPLAY_FIELDS)) {
+    $(id).addEventListener("change", () => {
+      state.settings.display[key] = $(id).checked;
+      Store.saveSettings(state.settings);
+      renderMonth();
+      if (state.sel) renderDetail();
+    });
+  }
+  $("displayClose").addEventListener("click", () => $("displayOverlay").classList.remove("open"));
   // 再読み込み: ページ全体をリロードしてアプリの最新版を反映
   $("reloadBtn").addEventListener("click", () => location.reload());
 

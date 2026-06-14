@@ -325,6 +325,10 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
       </select></div>
     <div class="frow"><label>地域（潮汐・日の出入り）</label>
       <select id="setRegion"></select></div>
+    <div class="frow" id="openDisplaySettings" style="cursor:pointer">
+      <label>表示設定</label>
+      <span style="color:var(--sub);font-size:13px">六曜・旧暦などの項目 &#10095;</span>
+    </div>
     <div class="frow" style="flex-direction:column;align-items:stretch;gap:6px">
       <label>Googleカレンダー連携</label>
       <input type="text" id="setGcalId" placeholder="OAuthクライアントID（〜.apps.googleusercontent.com）" style="font-size:11px">
@@ -347,6 +351,26 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
   </div>
 </div>
 
+<!-- 表示設定シート -->
+<div class="overlay" id="displayOverlay">
+  <div class="sheet">
+    <h3>表示設定</h3>
+    <div class="frow"><label>六曜</label><input type="checkbox" id="dispRokuyo"></div>
+    <div class="frow"><label>旧暦</label><input type="checkbox" id="dispLunar"></div>
+    <div class="frow"><label>節気</label><input type="checkbox" id="dispSekki"></div>
+    <div class="frow"><label>月相</label><input type="checkbox" id="dispMoon"></div>
+    <div class="frow"><label>干支</label><input type="checkbox" id="dispEto"></div>
+    <div class="frow"><label>九星</label><input type="checkbox" id="dispKyusei"></div>
+    <div class="frow"><label>中段</label><input type="checkbox" id="dispChoku"></div>
+    <div class="frow"><label>宿</label><input type="checkbox" id="dispShuku"></div>
+    <div class="frow"><label>選日・下段</label><input type="checkbox" id="dispSenjitsu"></div>
+    <div class="frow"><label>潮汐</label><input type="checkbox" id="dispTide"></div>
+    <div class="sheet-actions">
+      <button class="btn-save" id="displayClose">閉じる</button>
+    </div>
+  </div>
+</div>
+
 <!-- 解説モーダル -->
 <div class="overlay center" id="infoOverlay">
   <div class="modal" id="infoModal"></div>
@@ -357,7 +381,7 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
   <div class="modal" id="installModal"></div>
 </div>
 
-<script src="koyomi.js?v=32"></script>
-<script src="app.js?v=32"></script>
+<script src="koyomi.js?v=33"></script>
+<script src="app.js?v=33"></script>
 </body>
 </html>
