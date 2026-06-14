@@ -29,7 +29,7 @@ const state = {
     const DEFAULT_DISPLAY = {
       rokuyo: true, lunar: true, sekki: true, moon: true,
       eto: true, kyusei: true, choku: true, shuku: true,
-      senjitsu: true, tide: true,
+      senjitsu: true, tide: true, weather: true,
     };
     const loaded = Store.loadSettings();
     return Object.assign({
@@ -160,7 +160,7 @@ function renderMonth() {
       ${disp.moon ? `<div class="moon">${moonSVG(d.moonAge, 12, moonOpts)}</div>` : ""}`;
 
     cells.push(`<div class="${cls.join(" ")}" data-d="${d.day}">
-      ${Weather.cellHTML(d.date)}
+      ${disp.weather ? Weather.cellHTML(d.date) : ""}
       ${density === "simple" || !disp.rokuyo ? "" : `<div class="roku ${rokuCls}">${d.rokuyo}</div>`}
       <div class="num">${d.day}</div>
       ${mid}
@@ -862,7 +862,7 @@ function initSettingsSheet() {
   const DISPLAY_FIELDS = {
     dispRokuyo: "rokuyo", dispLunar: "lunar", dispSekki: "sekki", dispMoon: "moon",
     dispEto: "eto", dispKyusei: "kyusei", dispChoku: "choku", dispShuku: "shuku",
-    dispSenjitsu: "senjitsu", dispTide: "tide",
+    dispSenjitsu: "senjitsu", dispTide: "tide", dispWeather: "weather",
   };
   $("openDisplaySettings").addEventListener("click", () => {
     for (const [id, key] of Object.entries(DISPLAY_FIELDS)) $(id).checked = state.settings.display[key];
