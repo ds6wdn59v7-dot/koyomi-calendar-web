@@ -125,6 +125,7 @@ function renderMonth() {
   $("weekRow").innerHTML = Koyomi.WD.map((w) => `<span>${w}</span>`).join("");
 
   const density = state.settings.density;
+  const disp = state.settings.display;
   const cells = [];
   for (let i = 0; i < days[0].weekday; i++) cells.push("<div></div>");
   for (const d of days) {
@@ -156,11 +157,11 @@ function renderMonth() {
     const moonOpts = isFull ? { ink: "#e9b830", ring: "#e9b830" } : isNew ? { ring: "var(--red)" } : {};
     const mid = density === "simple" ? "" : `
       <div class="${oldCls}">${oldTxt}</div>
-      <div class="moon">${moonSVG(d.moonAge, 12, moonOpts)}</div>`;
+      ${disp.moon ? `<div class="moon">${moonSVG(d.moonAge, 12, moonOpts)}</div>` : ""}`;
 
     cells.push(`<div class="${cls.join(" ")}" data-d="${d.day}">
       ${Weather.cellHTML(d.date)}
-      ${density === "simple" || !state.settings.display.rokuyo ? "" : `<div class="roku ${rokuCls}">${d.rokuyo}</div>`}
+      ${density === "simple" || !disp.rokuyo ? "" : `<div class="roku ${rokuCls}">${d.rokuyo}</div>`}
       <div class="num">${d.day}</div>
       ${mid}
       <div class="marks">${marks}</div>
@@ -247,18 +248,21 @@ function renderDetail() {
     </div>`;
   }
   const schedule = `<div class="card">
-    <div class="chead"><span class="ctitle serif">予定</span></div>
+    <div class="chead"><span class="ctitle serif">予定</span><button class="add-ev" id="addEvInline" aria-label="予定を追加">➕</button></div>
     ${evRows + gRows || `<div class="noev">この日の予定はありません（右上の＋で追加）</div>`}
   </div>`;
 
   // 情報行
   const disp = state.settings.display;
-  const lunarRow = !disp.lunar ? "" : `<div class="irow" data-info="lunar">
+  const lunarMoonRow = !disp.lunar && !disp.moon ? "" : `<div class="irow" data-info="${disp.lunar ? "lunar" : "moon"}">
     <div class="lbl serif">旧暦</div>
-    <div><div class="main">${d.lunar.leap ? "閏" : ""}${d.lunar.m}月${d.lunar.d}日
-      <small>${Koyomi.WAFU[d.lunar.m]}・${Koyomi.kanjiNum(d.lunar.d)}日</small></div>
-      ${density !== "simple" ? `<div class="note">${d.lunar.d === 1 ? "朔（新月）" : d.lunar.d === 15 ? "望（満月）" : "月の満ち欠けで数える暦"}</div>` : ""}
-    </div></div>`;
+    <div style="flex:1">
+      ${disp.lunar ? `<div class="main">${d.lunar.leap ? "閏" : ""}${d.lunar.m}月${d.lunar.d}日
+        <small>${Koyomi.WAFU[d.lunar.m]}・${Koyomi.kanjiNum(d.lunar.d)}日</small></div>` : ""}
+      ${disp.moon ? `<div class="note">${d.moonPhase.name}${d.moonPhase.yomi || d.moonPhase.alt ? "（" + (d.moonPhase.yomi || d.moonPhase.alt) + "）" : ""}　月齢 ${d.moonAge.toFixed(1)}</div>` : ""}
+    </div>
+    ${disp.moon ? `<div class="moonbig">${moonSVG(d.moonAge, 48)}</div>` : ""}
+  </div>`;
 
   const sekkiRow = !disp.sekki ? "" : `<div class="irow" data-info="sekki">
     <div class="lbl serif">節気</div>
@@ -267,21 +271,13 @@ function renderDetail() {
       ${density !== "simple" ? `<div class="note">${d.kou.group}　${d.sekki ? d.sekki.note : d.kou.note}</div>` : ""}
     </div></div>`;
 
-  const moonRow = !disp.moon ? "" : `<div class="irow" data-info="moon">
-    <div class="lbl serif">月相</div>
-    <div style="flex:1"><div class="main">${d.moonPhase.name}
-      <small>${d.moonPhase.yomi || d.moonPhase.alt}</small></div>
-      ${density !== "simple" ? `<div class="note">月齢 ${d.moonAge.toFixed(1)}${d.moonPhase.alt && d.moonPhase.yomi ? "　" + d.moonPhase.alt : ""}</div>` : ""}
-    </div>
-    <div class="moonbig">${moonSVG(d.moonAge, 48)}</div></div>`;
-
   // 暦グリッド
   const kcells = [
     ["六曜", d.rokuyo, d.rokuyoYomi, d.rokuyo === "大安", "rokuyo"],
     ["干支", d.eto.kanji, d.eto.yomi, false, "eto"],
     ["九星", d.kyusei.s, d.kyusei.n, false, "kyusei"],
-    ["中段", d.choku, "十二直・" + d.chokuYomi, false, "choku"],
-    ["宿", d.shuku + "宿", "二十八宿・" + d.shukuYomi, false, "shuku"],
+    ["中段", d.choku, d.chokuYomi, false, "choku"],
+    ["宿", d.shuku + "宿", d.shukuYomi, false, "shuku"],
   ].filter(([, , , , kind]) => disp[kind])
    .map(([l, v, s, taian, kind]) =>
     `<div class="kcell" data-info="${kind}"><div class="l serif">${l}</div>
@@ -323,23 +319,25 @@ function renderDetail() {
   $("dBody").innerHTML = `
     <div class="hero">
       <div class="era serif">${Koyomi.eraKanjiString(dt.y)}　${dt.y} 年 ${dt.m} 月</div>
-      <div class="big ${wdCls}">${dt.d}</div>
+      <div class="bigrow">
+        <button class="daynav" id="dPrev" aria-label="前日">&#10094;</button>
+        <div class="big ${wdCls}">${dt.d}</div>
+        <button class="daynav" id="dNext" aria-label="翌日">&#10095;</button>
+      </div>
       <div class="sub">
         <span class="sub-side"></span>
         <span class="wd serif ${wdCls}">${d.weekdayLabel}曜日</span>
         <span class="sub-side right">
-          ${d.holiday ? `<span class="ev serif" style="color:var(--red)">◆ ${d.holiday}</span>` : ""}
-          ${d.event ? `<span class="ev serif">◆ ${d.event}</span>` : ""}
           <span class="tide-chip" data-info="tide">潮 ${tides.name}</span>
         </span>
       </div>
-    </div>
-    <div class="dnav">
-      <button id="dPrev">&#10094; 前日</button>
-      <button id="dNext">翌日 &#10095;</button>
+      ${d.holiday || d.event ? `<div class="evline serif">
+        ${d.holiday ? `<div class="holiday">◆ ${d.holiday}</div>` : ""}
+        ${d.event ? `<div>◆ ${d.event}</div>` : ""}
+      </div>` : ""}
     </div>
     ${schedule}
-    ${lunarRow}${sekkiRow}${moonRow}
+    ${lunarMoonRow}${sekkiRow}
     ${kcells ? `<div class="kgrid">${kcells}</div>` : ""}
     ${disp.senjitsu ? `<div class="senrow"><span class="lbl serif">選日・下段</span><div class="chips">${chips}</div></div>` : ""}
     ${disp.tide ? `<div class="card">
@@ -370,6 +368,7 @@ function renderDetail() {
   });
   $("dPrev").addEventListener("click", () => moveDay(-1));
   $("dNext").addEventListener("click", () => moveDay(1));
+  $("addEvInline").addEventListener("click", () => openEventSheet(null));
 }
 
 // ===== 解説モーダル =====

@@ -1,6 +1,6 @@
 /* sw.js — オフラインキャッシュ（静的アプリなので cache-first） */
-const CACHE = "koyomi-v33";
-const ASSETS = ["./", "./index.html", "./app.js?v=33", "./koyomi.js?v=33", "./manifest.webmanifest", "./icon.svg", "./apple-touch-icon.png"];
+const CACHE = "koyomi-v34";
+const ASSETS = ["./", "./index.html", "./app.js?v=34", "./koyomi.js?v=34", "./manifest.webmanifest", "./icon.svg", "./apple-touch-icon.png"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
