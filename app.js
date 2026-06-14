@@ -325,16 +325,14 @@ function renderDetail() {
         <button class="daynav" id="dNext" aria-label="翌日">&#10095;</button>
       </div>
       <div class="sub">
-        <span class="sub-side"></span>
+        <span class="sub-side">
+          ${d.holiday || d.event ? `<span class="evtag serif${d.holiday ? " holiday" : ""}">◆ ${esc(d.holiday || d.event)}</span>` : ""}
+        </span>
         <span class="wd serif ${wdCls}">${d.weekdayLabel}曜日</span>
         <span class="sub-side right">
           <span class="tide-chip" data-info="tide">潮 ${tides.name}</span>
         </span>
       </div>
-      ${d.holiday || d.event ? `<div class="evline serif">
-        ${d.holiday ? `<div class="holiday">◆ ${d.holiday}</div>` : ""}
-        ${d.event ? `<div>◆ ${d.event}</div>` : ""}
-      </div>` : ""}
     </div>
     ${schedule}
     ${lunarMoonRow}${sekkiRow}

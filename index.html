@@ -143,16 +143,16 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 .hero .wd.sun { color:var(--red); } .hero .wd.sat { color:var(--sat); }
 .hero .tide-chip { font-size:11px; font-weight:800; letter-spacing:1px; padding:4px 11px;
   border-radius:20px; background:var(--chip-bg); color:var(--ink-soft); }
-.hero .evline { text-align:left; margin-top:8px; font-size:12px; font-weight:600;
-  letter-spacing:1px; color:var(--gold); line-height:1.6; }
-.hero .evline .holiday { color:var(--red); }
+.hero .evtag { display:block; font-size:11px; font-weight:600; letter-spacing:0.5px;
+  color:var(--gold); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.hero .evtag.holiday { color:var(--red); }
 
 .card { background:var(--paper2); border:1px solid var(--line2); border-radius:14px;
   padding:8px 12px; margin-top:9px; }
 .card .chead { display:flex; align-items:center; justify-content:space-between; }
 .card .ctitle { font-size:14px; font-weight:700; letter-spacing:2px; }
-.card .add-ev { width:30px; height:30px; border-radius:50%; background:var(--chip-bg);
-  font-size:17px; line-height:1; color:var(--red); flex:none; padding:0;
+.card .add-ev { width:44px; height:44px; border-radius:50%; background:var(--chip-bg);
+  font-size:22px; line-height:1; color:var(--red); flex:none; padding:0;
   display:flex; align-items:center; justify-content:center; }
 .noev { font-size:12px; color:var(--faint); padding:6px 0; }
 .evrow { display:flex; gap:10px; align-items:flex-start; margin-top:6px; }
@@ -386,7 +386,7 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
   <div class="modal" id="installModal"></div>
 </div>
 
-<script src="koyomi.js?v=36"></script>
-<script src="app.js?v=36"></script>
+<script src="koyomi.js?v=37"></script>
+<script src="app.js?v=37"></script>
 </body>
 </html>
