@@ -128,10 +128,7 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 .dbody { flex:1; overflow-y:auto; padding:0 20px calc(24px + env(safe-area-inset-bottom)); }
 .dhead, .dbody { position:relative; z-index:1; }
 .holiday-flag { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-  width:70vw; max-width:280px; aspect-ratio:3/2; background:#fff; border-radius:8px;
-  border:1px solid rgba(176,67,58,.15); opacity:0.12; pointer-events:none; z-index:0; }
-.holiday-flag::after { content:""; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-  width:40%; height:60%; border-radius:50%; background:#bc002d; }
+  width:65vw; max-width:240px; aspect-ratio:240/200; opacity:0.12; pointer-events:none; z-index:0; }
 .holiday-flag[hidden] { display:none; }
 .hero { text-align:center; padding:10px 0 8px; border-bottom:1px solid var(--line); }
 .hero .era { font-size:13px; letter-spacing:2px; color:var(--sub); font-weight:600; }
@@ -295,7 +292,19 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 
 <!-- 日詳細 -->
 <div class="screen" id="detailScreen">
-  <div class="holiday-flag" id="holidayFlag" hidden aria-hidden="true"></div>
+  <svg class="holiday-flag" id="holidayFlag" hidden aria-hidden="true" viewBox="0 0 240 200" xmlns="http://www.w3.org/2000/svg">
+    <g transform="translate(120,170) rotate(-32) scale(-1,1)">
+      <line x1="0" y1="40" x2="0" y2="-145" stroke="#9c7b4a" stroke-width="6" stroke-linecap="round"/>
+      <rect x="0" y="-148" width="100" height="65" fill="#ffffff" stroke="#3a3a3a" stroke-width="2.5"/>
+      <circle cx="50" cy="-115.5" r="18" fill="#bc002d"/>
+    </g>
+    <g transform="translate(120,170) rotate(32)">
+      <line x1="0" y1="40" x2="0" y2="-145" stroke="#9c7b4a" stroke-width="6" stroke-linecap="round"/>
+      <rect x="0" y="-148" width="100" height="65" fill="#ffffff" stroke="#3a3a3a" stroke-width="2.5"/>
+      <circle cx="50" cy="-115.5" r="18" fill="#bc002d"/>
+    </g>
+    <circle cx="120" cy="170" r="5" fill="#9c7b4a"/>
+  </svg>
   <div class="dhead">
     <button class="back" id="backBtn">&#10094; 戻る</button>
     <div class="dtitle" id="dTitle"></div>
@@ -394,7 +403,7 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
   <div class="modal" id="installModal"></div>
 </div>
 
-<script src="koyomi.js?v=38"></script>
-<script src="app.js?v=38"></script>
+<script src="koyomi.js?v=39"></script>
+<script src="app.js?v=39"></script>
 </body>
 </html>
