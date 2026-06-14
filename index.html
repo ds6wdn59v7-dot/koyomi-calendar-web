@@ -57,11 +57,11 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 /* ===== 月ヘッダー ===== */
 .mhead { position:relative; text-align:center; padding:14px 18px 10px; }
 .mhead .era { font-size:12px; letter-spacing:4px; font-weight:700; color:var(--red); }
-.mhead .ym { display:flex; align-items:baseline; justify-content:center; gap:10px; margin-top:4px; }
+.mhead .ym { display:flex; align-items:center; justify-content:center; gap:18px; margin-top:4px; }
+.mhead .ylabels { display:flex; align-items:baseline; gap:10px; }
 .mhead .y { font-size:16px; font-weight:600; color:var(--sub); }
 .mhead .m { font-size:38px; font-weight:900; }
 .mhead .wafu { font-size:17px; letter-spacing:2px; font-weight:600; color:var(--gold); }
-.mnav { display:flex; justify-content:center; gap:56px; margin-top:8px; }
 .nav-btn { width:36px; height:36px;
   border-radius:50%; background:var(--grid-bg); border:1px solid var(--line);
   color:var(--sub); font-size:14px; display:flex; align-items:center; justify-content:center; }
@@ -100,7 +100,7 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
 .cell .roku.taian { color:var(--red); } .cell .roku.butsu { color:var(--faint); }
 .cell .num { font-size:18px; font-weight:700; line-height:1.2; }
 .cell.sun .num { color:var(--red); } .cell.sat .num { color:var(--sat); }
-.cell .old { font-size:9px; color:var(--sub); height:12px; }
+.cell .old { font-size:10px; color:var(--ink-soft); font-weight:700; letter-spacing:0.5px; height:13px; }
 .cell .old.full { color:#d9a516; font-weight:800; }
 .cell .old.new { color:var(--red); font-weight:800; }
 .cell .moon svg { overflow:visible; }
@@ -269,12 +269,12 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
     <span class="micon" id="monthIcon"></span>
     <div class="era serif" id="eraLine"></div>
     <div class="ym">
-      <span class="y" id="yLabel"></span>
-      <span class="m" id="mLabel"></span>
-      <span class="wafu serif" id="wafuLabel"></span>
-    </div>
-    <div class="mnav">
       <button class="nav-btn" id="prevBtn">&#10094;</button>
+      <span class="ylabels">
+        <span class="y" id="yLabel"></span>
+        <span class="m" id="mLabel"></span>
+        <span class="wafu serif" id="wafuLabel"></span>
+      </span>
       <button class="nav-btn" id="nextBtn">&#10095;</button>
     </div>
     <button class="gear-btn" id="gearBtn" aria-label="設定">&#9776;</button>
@@ -384,7 +384,7 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
   <div class="modal" id="installModal"></div>
 </div>
 
-<script src="koyomi.js?v=34"></script>
-<script src="app.js?v=34"></script>
+<script src="koyomi.js?v=35"></script>
+<script src="app.js?v=35"></script>
 </body>
 </html>

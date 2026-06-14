@@ -114,7 +114,7 @@ function moonSVG(age, size, opts = {}) {
 // ===== 月間ビュー =====
 function renderMonth() {
   const y = state.dispY, m = state.dispM;
-  $("eraLine").textContent = `${Koyomi.eraKanjiString(y)} ・ ${Koyomi.yearEtoKanji(y)}`;
+  $("eraLine").textContent = `${Koyomi.eraKanjiString(y)} ・ ${Koyomi.yearEtoKanji(y)} ・ ${Koyomi.kokiString(y)}`;
   $("yLabel").textContent = y;
   $("mLabel").textContent = m;
   $("monthIcon").textContent = MONTH_ICONS[m];
