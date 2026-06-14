@@ -220,6 +220,7 @@ function renderDetail() {
   const userEvs = eventsFor(dt);
 
   $("dTitle").textContent = `${dt.m}月${dt.d}日`;
+  $("holidayFlag").hidden = !d.holiday;
 
   const wdCls = d.isSunday || d.holiday ? "sun" : d.isSaturday ? "sat" : "";
 
