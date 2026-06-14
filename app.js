@@ -328,7 +328,13 @@ function renderDetail() {
       </div>
       <div class="sub">
         <span class="sub-side">
-          ${d.holiday || d.event ? `<span class="evtag serif${d.holiday ? " holiday" : ""}">◆ ${esc(d.holiday || d.event)}</span>` : ""}
+          ${(() => {
+            const parts = d.event ? d.event.split("・") : [];
+            if (d.holiday && !parts.includes(d.holiday)) parts.unshift(d.holiday);
+            return parts.length
+              ? `<span class="evtag serif${d.holiday ? " holiday" : ""}">◆ ${esc(parts.join("・"))}</span>`
+              : "";
+          })()}
         </span>
         <span class="wd serif ${wdCls}">${d.weekdayLabel}曜日</span>
         <span class="sub-side right">
