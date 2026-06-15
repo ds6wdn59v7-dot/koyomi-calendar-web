@@ -259,6 +259,16 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
   font-weight:700; color:var(--red); border:1px solid var(--red); }
 .evsheet-note { font-size:12px; color:var(--sub); background:var(--chip-bg); border-radius:8px;
   padding:8px 10px; margin-bottom:4px; }
+.frow textarea { font:inherit; font-size:14px; padding:7px 10px; border:1px solid var(--line);
+  border-radius:9px; background:var(--grid-bg); color:var(--ink); flex:1; min-width:0;
+  resize:vertical; line-height:1.5; }
+.frow.ev-url-row { align-items:flex-start; flex-direction:column; gap:4px; }
+.frow.ev-url-row label { margin-bottom:0; }
+.ev-url-chip { display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:700;
+  color:var(--red); background:var(--chip-bg); padding:6px 12px; border-radius:20px;
+  text-decoration:none; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ev-memo { display:block; font-size:12px; color:var(--sub); margin-top:3px; white-space:pre-wrap;
+  word-break:break-all; }
 
 .evdet-head { display:flex; align-items:flex-start; gap:10px; margin-bottom:14px; }
 .evdet-head .emoji { font-size:24px; line-height:1.3; }
@@ -408,7 +418,7 @@ button { font:inherit; color:inherit; background:none; border:none; cursor:point
   <div class="modal" id="installModal"></div>
 </div>
 
-<script src="koyomi.js?v=46"></script>
-<script src="app.js?v=46"></script>
+<script src="koyomi.js?v=47"></script>
+<script src="app.js?v=47"></script>
 </body>
 </html>

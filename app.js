@@ -235,7 +235,9 @@ function renderDetail() {
       <div class="bar" style="background:${EVENT_COLOR}"></div>
       <div class="time">${time}${endT}</div>
       <div class="et">${e.emoji ? esc(e.emoji) + " " : ""}${esc(e.title)}${repLabel ? ` <span class="rep-tag">↻${repLabel}</span>` : ""}
-        ${placeLink(e.place) ? `<small>${placeLink(e.place)}</small>` : ""}</div>
+        ${placeLink(e.place) ? `<small>${placeLink(e.place)}</small>` : ""}
+        ${e.memo ? `<small class="ev-memo">${esc(e.memo)}</small>` : ""}
+        ${e.url ? `<small><a class="ev-url-chip" href="${esc(e.url)}" target="_blank" rel="noopener">🔗 会議に参加</a></small>` : ""}</div>
     </div>`;
   }
   // Googleカレンダーの予定（読み取り専用）
@@ -246,7 +248,10 @@ function renderDetail() {
     gRows += `<div class="evrow" data-geid="${esc(e.gcalId)}">
       <div class="bar" style="background:${GCal.COLOR}"></div>
       <div class="time">${time}${endT}</div>
-      <div class="et">${esc(e.title)}<small>${placeLink(e.place)}Google</small></div>
+      <div class="et">${esc(e.title)}
+        <small>${placeLink(e.place)}Google</small>
+        ${e.memo ? `<small class="ev-memo">${esc(e.memo)}</small>` : ""}
+        ${e.url ? `<small><a class="ev-url-chip" href="${esc(e.url)}" target="_blank" rel="noopener">🔗 会議に参加</a></small>` : ""}</div>
     </div>`;
   }
   const schedule = `<div class="card">
@@ -462,6 +467,8 @@ function openEventSheet(editId = null, gcalSeed = null) {
     end: src && src.end != null ? Koyomi.fmtTime(src.end) : "10:00",
     emoji: ev ? ev.emoji || "" : "",
     place: src ? src.place || "" : "",
+    memo: src ? src.memo || "" : "",
+    url: src ? src.url || "" : "",
     repeat: ev ? ev.repeat || "none" : "none",
     repeatUntil: ev ? ev.repeatUntil || "" : "",
   };
@@ -480,6 +487,8 @@ function openEventSheet(editId = null, gcalSeed = null) {
     <div class="frow" id="timeRow1"><label>開始</label>${timeSelectHTML("evStart", v.start)}</div>
     <div class="frow" id="timeRow2"><label>終了</label>${timeSelectHTML("evEnd", v.end)}</div>
     <div class="frow"><label>場所</label><input type="text" id="evPlace" value="${esc(v.place)}" placeholder="例: 渋谷"></div>
+    <div class="frow ev-url-row" ${v.url ? '' : 'style="display:none"'}><label>会議URL</label><a id="evUrlLink" class="ev-url-chip" href="${esc(v.url)}" target="_blank" rel="noopener">${esc(v.url)}</a></div>
+    <div class="frow"><label>メモ</label><textarea id="evMemo" placeholder="備考・説明など" rows="3">${esc(v.memo)}</textarea></div>
     <div class="frow"><label>繰り返し</label><select id="evRepeat">${repOpts}</select></div>
     <div class="frow" id="repUntilRow"><label>繰り返しの終了</label><input type="date" id="evRepeatUntil" value="${v.repeatUntil}"></div>
     <div class="frow" style="border:none"><label>アイコン</label><input type="text" id="evEmoji" value="${esc(v.emoji)}" placeholder="絵文字" style="max-width:80px;text-align:center"></div>
@@ -556,6 +565,8 @@ function saveEvent() {
     y: base.y, m: base.m, d: base.d, min, end, title,
     emoji,
     place: $("evPlace").value.trim() || null,
+    memo: $("evMemo").value.trim() || null,
+    url: (editing?.url || seed?.url) || null,
     repeat, repeatUntil,
     gcalId: editing ? editing.gcalId || null : (seed ? seed.gcalId : null),
   };
@@ -705,7 +716,12 @@ const GCal = {
         d = s.getDate();
         if (s.getMonth() + 1 !== m) continue;
       } else continue;
-      evs.push({ y, m, d, min, end, title: it.summary || "(無題)", place: it.location || null, gcalId: it.id });
+      const meetUrl = it.hangoutLink
+        || it.conferenceData?.entryPoints?.find((ep) => ep.entryPointType === "video")?.uri
+        || it.extendedProperties?.private?.url
+        || null;
+      evs.push({ y, m, d, min, end, title: it.summary || "(無題)", place: it.location || null,
+        memo: it.description || null, url: meetUrl, gcalId: it.id });
     }
     this.cache.set(key, evs);
     return evs;
@@ -721,7 +737,8 @@ const GCal = {
     const body = {
       summary: (ev.emoji ? ev.emoji + " " : "") + ev.title,
       location: ev.place || undefined,
-      extendedProperties: { private: { koyomiId: ev.id } },
+      description: ev.memo || undefined,
+      extendedProperties: { private: { koyomiId: ev.id, ...(ev.url ? { url: ev.url } : {}) } },
     };
     if (ev.min == null) {
       body.start = { date };
