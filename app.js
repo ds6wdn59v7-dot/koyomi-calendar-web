@@ -483,12 +483,12 @@ function openEventSheet(editId = null, gcalSeed = null) {
     <h3>${src ? "予定を編集" : `${dt.m}月${dt.d}日の予定`}</h3>
     ${gcalSeed ? `<p class="evsheet-note">Googleカレンダーの予定です。保存するとこのアプリでも管理され、Googleカレンダーにも反映されます。</p>` : ""}
     <div class="frow"><label>タイトル</label><input type="text" id="evTitle" value="${esc(v.title)}" placeholder="予定名"></div>
+    <div class="frow frow-memo"><label>メモ</label><textarea id="evMemo" placeholder="備考・説明など" rows="3">${esc(v.memo)}</textarea></div>
     <div class="frow"><label>終日</label><input type="checkbox" id="evAllDay" ${v.allDay ? "checked" : ""}></div>
     <div class="frow" id="timeRow1"><label>開始</label>${timeSelectHTML("evStart", v.start)}</div>
     <div class="frow" id="timeRow2"><label>終了</label>${timeSelectHTML("evEnd", v.end)}</div>
     <div class="frow"><label>場所</label><input type="text" id="evPlace" value="${esc(v.place)}" placeholder="例: 渋谷"></div>
     <div class="frow ev-url-row" ${v.url ? '' : 'style="display:none"'}><label>会議URL</label><a id="evUrlLink" class="ev-url-chip" href="${esc(v.url)}" target="_blank" rel="noopener">${esc(v.url)}</a></div>
-    <div class="frow"><label>メモ</label><textarea id="evMemo" placeholder="備考・説明など" rows="3">${esc(v.memo)}</textarea></div>
     <div class="frow"><label>繰り返し</label><select id="evRepeat">${repOpts}</select></div>
     <div class="frow" id="repUntilRow"><label>繰り返しの終了</label><input type="date" id="evRepeatUntil" value="${v.repeatUntil}"></div>
     <div class="frow" style="border:none"><label>アイコン</label><input type="text" id="evEmoji" value="${esc(v.emoji)}" placeholder="絵文字" style="max-width:80px;text-align:center"></div>
